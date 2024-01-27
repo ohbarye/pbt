@@ -5,7 +5,11 @@ RSpec.describe Pbt do
     expect(Pbt::VERSION).not_to be nil
   end
 
-  it "does something useful" do
-    expect(false).to eq(true)
+  describe "basic usage" do
+    it "works" do
+      Pbt.forall(Pbt::Generator.integer) do |number|
+        raise TypeError unless number.is_a?(Integer)
+      end
+    end
   end
 end
