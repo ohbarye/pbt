@@ -1,24 +1,58 @@
-# Pbt
+# Property-Based Testing in Ruby
 
-TODO: Delete this and the text below, and describe your gem
-
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/pbt`. To experiment with that code, run `bin/console` for an interactive prompt.
+A property-based testing tool for Ruby, utilizing Ractor for parallelizing test cases.
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
-
 Install the gem and add to the application's Gemfile by executing:
 
-    $ bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```shell
+$ bundle add pbt
+```
 
 If bundler is not being used to manage dependencies, install the gem by executing:
 
-    $ gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```shell
+$ gem install pbt
+```
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+# Let's say you have a method that returns just even numbers.
+def twice(number)
+  number * 2
+end
+
+RSpec.describe Pbt do
+  it "works" do
+    # The given block is executed 100 times with different random numbers.
+    # Besides, the block runs in parallel by Ractor.
+    Pbt.forall(Pbt::Generator.integer) do |number|
+      result = twice(number)
+      raise "Result should be even number" if result % 2 != 0
+    end
+    
+    # If the function has a bug, the test fails with a counterexample.
+    # Pbt::CaseFailure:
+    #   RuntimeError:
+    #   Failed on:
+    #            0.5
+  end
+end
+```
+
+## TODOs
+
+- [ ] More generators
+  - https://proper-testing.github.io/apidocs/
+- [ ] Enable to combine generators
+  - e.g. `Pbt::Generator.list(Pbt::Generator.integer)`
+- [ ] More sophisticated syntax for property-based testing
+  - e.g. `forall(integer) { |number| ... }` (Omit `Pbt` module)
+- [ ] Support for shrinking
+- [ ] Allow to use assertions
+  - It's hard to pass assertions like `expect`, `assert` to a Ractor?
 
 ## Development
 
