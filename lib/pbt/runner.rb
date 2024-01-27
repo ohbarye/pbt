@@ -23,7 +23,8 @@ module Pbt
       cases.each do |c|
         c.ractor.take
       rescue => e
-        failures << c.with(exception: e.cause)
+        c.exception = e.cause
+        failures << c
       end
 
       message = []
