@@ -3,7 +3,7 @@
 module Pbt
   class Runner
     CASE_COUNT = 100
-    Case = Struct.new(:val, :ractor, :exception)
+    Case = Struct.new(:val, :ractor, :exception, keyword_init: true)
     private_constant :CASE_COUNT, :Case
 
     def initialize(generator, &block)
