@@ -19,9 +19,9 @@ $ gem install pbt
 ## Usage
 
 ```ruby
-# Let's say you have a method that returns just even numbers.
-def twice(number)
-  number * 2
+# Let's say you have a method that returns just a reciprocal number.
+def reciprocal(number)
+  Rational(1, number)
 end
 
 RSpec.describe Pbt do
@@ -29,15 +29,17 @@ RSpec.describe Pbt do
     # The given block is executed 100 times with different random numbers.
     # Besides, the block runs in parallel by Ractor.
     Pbt.forall(Pbt::Generator.integer) do |number|
-      result = twice(number)
-      raise "Result should be even number" if result % 2 != 0
+      result = reciprocal(number)
+      raise "Result should be even number" if result * number == 0
     end
     
     # If the function has a bug, the test fails with a counterexample.
+    # For example, the reciprocal method doesn't work for 0 regardless of the behavior is intended or not.
+    # 
     # Pbt::CaseFailure:
-    #   RuntimeError:
+    #   ZeroDivisionError:
     #   Failed on:
-    #            0.5
+    #            0
   end
 end
 ```
