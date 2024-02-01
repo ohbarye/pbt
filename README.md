@@ -1,5 +1,7 @@
 # Property-Based Testing in Ruby
 
+⚠️ This gem is currently in the proof of concept phase. It's experimental and not production quality for now!
+
 A property-based testing tool for Ruby, utilizing Ractor for parallelizing test cases.
 
 ## Installation
