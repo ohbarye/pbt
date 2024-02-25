@@ -14,7 +14,7 @@ module Pbt
     def run
       cases = []
       CASE_COUNT.times do
-        val = @generator.call
+        val = @generator.generate
         ractor = Ractor.new(val, &@block)
         cases << Case.new(val:, ractor:, exception: nil)
       end
