@@ -7,7 +7,18 @@ require_relative "pbt/runner"
 module Pbt
   class CaseFailure < StandardError; end
 
-  def self.forall(generator, &block)
-    Runner.new(generator, &block).run
+  @properties = []
+
+  def self.property(name, &)
+    @properties << Ractor.new(name: name, &)
+  end
+
+  def self.wait_for_all_properties
+    @properties.each(&:take)
+    @properties = []
+  end
+
+  def self.forall(generator, &)
+    Runner.new(generator, &).run
   end
 end
