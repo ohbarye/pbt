@@ -64,7 +64,15 @@ RSpec.describe Pbt do
       Pbt.wait_for_all_properties
     end
 
-    it "can be configured for each run" do
+    it "can be configured for each property" do
+      Pbt.property "finds the biggest element", config: {use_ractor: false} do
+        Pbt.forall(Pbt::Generator.array(Pbt::Generator.integer)) do |numbers|
+          raise if PbtTest.biggest(numbers) != numbers.max
+        end
+      end
+    end
+
+    it "can be configured for each runner" do
       Pbt.property "finds the biggest element" do
         config = {
           verbose: true,

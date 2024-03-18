@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "pbt/version"
+require_relative "pbt/property"
 require_relative "pbt/generator"
 require_relative "pbt/runner"
 require_relative "pbt/configuration"
@@ -10,17 +11,14 @@ module Pbt
 
   @properties = []
 
-  def self.property(name, &)
+  def self.property(name, config: {}, &)
     configure unless const_defined?(:Configuration)
-    @properties << if Configuration.use_ractor
-      Ractor.new(name: name, &)
-    else
-      yield
-    end
+    config = Configuration.to_h.merge(config.to_h)
+    @properties << Property.new(name, config:, &)
   end
 
   def self.wait_for_all_properties
-    @properties.each(&:take) if Configuration.use_ractor
+    @properties.each(&:check)
     @properties = []
   end
 
