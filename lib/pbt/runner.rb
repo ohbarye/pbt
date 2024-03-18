@@ -2,26 +2,31 @@
 
 module Pbt
   class Runner
-    CASE_COUNT = 100
-    Case = Struct.new(:val, :ractor, :exception, keyword_init: true)
-    private_constant :CASE_COUNT, :Case
+    Case = Struct.new(:val, :actor, :exception, keyword_init: true)
+    private_constant :Case
 
-    def initialize(generator, &block)
+    def initialize(generator, config: {}, &block)
       @generator = generator
+      @config = config
       @block = block
     end
 
     def run
       cases = []
-      CASE_COUNT.times do
+      @config[:case_count].times do
         val = @generator.generate
-        ractor = Ractor.new(val, &@block)
-        cases << Case.new(val:, ractor:, exception: nil)
+        actor = if @config[:use_ractor]
+          -> { Ractor.new(val, &@block) }
+        else
+          -> { @block.call(val) }
+        end
+        cases << Case.new(val:, actor:, exception: nil)
       end
 
       failures = []
       cases.each do |c|
-        c.ractor.take
+        c.actor.call
+        print "." if @config[:verbose]
       rescue => e
         c.exception = e.cause
         failures << c
