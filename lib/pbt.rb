@@ -1,29 +1,21 @@
 # frozen_string_literal: true
 
 require_relative "pbt/version"
-require_relative "pbt/property"
-require_relative "pbt/generator"
-require_relative "pbt/runner"
-require_relative "pbt/configuration"
+require_relative "pbt/arbitrary/arbitrary_methods"
+require_relative "pbt/arbitrary/generator"
+require_relative "pbt/check/runner_methods"
+require_relative "pbt/check/property"
+require_relative "pbt/check/configuration"
 
 module Pbt
-  class CaseFailure < StandardError; end
+  class PropertyFailure < StandardError; end
 
-  @properties = []
+  extend Arbitrary::ArbitraryMethods
+  extend Check::RunnerMethods
+  extend Check::ConfigurationMethods
 
-  def self.property(name, config: {}, &)
-    configure unless const_defined?(:Configuration)
-    config = Configuration.to_h.merge(config.to_h)
-    @properties << Property.new(name, config:, &)
-  end
-
-  def self.wait_for_all_properties
-    @properties.each(&:check)
-    @properties = []
-  end
-
-  def self.forall(generator, config: {}, &)
-    config = Configuration.to_h.merge(config.to_h)
-    Runner.new(generator, config:, &).run
+  # @return [Property]
+  def self.property(generator, &predicate)
+    Check::Property.new(generator, &predicate)
   end
 end
