@@ -45,5 +45,12 @@ RSpec.describe Pbt::Arbitrary::ArrayArbitrary do
         []
       ]
     end
+
+    context "when current value and target is same" do
+      it "returns an empty Enumerator" do
+        arb = Pbt::Arbitrary::ArrayArbitrary.new(Pbt.integer)
+        expect(arb.shrink([]).to_a).to eq []
+      end
+    end
   end
 end

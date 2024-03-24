@@ -20,7 +20,10 @@ module Pbt
 
       # @return [Enumerator]
       def shrink(current, target: DEFAULT_TARGET)
-        is_positive_gap = (current - target) > 0
+        gap = current - target
+        return Enumerator.new { |_| } if gap == 0
+
+        is_positive_gap = gap > 0
 
         Enumerator.new do |y|
           while (diff = (current - target).abs) > 1

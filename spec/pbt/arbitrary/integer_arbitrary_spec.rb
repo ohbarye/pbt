@@ -45,6 +45,13 @@ RSpec.describe Pbt::Arbitrary::IntegerArbitrary do
         arb = Pbt::Arbitrary::IntegerArbitrary.new
         expect(arb.shrink(-100, target: -200).to_a).to eq [-150, -175, -187, -193, -196, -198, -199, -200]
       end
+
+      context "when current value and target is same" do
+        it "returns an empty Enumerator" do
+          arb = Pbt::Arbitrary::IntegerArbitrary.new
+          expect(arb.shrink(0, target: 0).to_a).to eq []
+        end
+      end
     end
   end
 end

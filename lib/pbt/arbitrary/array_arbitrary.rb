@@ -26,6 +26,7 @@ module Pbt
       def shrink(current)
         return Enumerator.new { |_| } if current.size == 0
 
+        # TODO: Implement more sophisticated shrinking. It should be shrink each item as well.
         Enumerator.new do |y|
           @length_arb.shrink(current.size).each do |length|
             slice_start = current.size - length

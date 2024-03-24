@@ -12,6 +12,12 @@ module PbtTestTarget
   end
 
   def self.reciprocal(number)
+    # This method raises ZeroDivisionError if number is 0.
     Rational(1, number)
+  end
+
+  def self.sort_as_integer(str_numbers)
+    # This should be str_numbers.sort_by(&:to_i) but it doesn't.
+    str_numbers.sort
   end
 end
