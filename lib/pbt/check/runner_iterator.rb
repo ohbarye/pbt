@@ -1,13 +1,12 @@
 # frozen_string_literal: true
 
+require "delegate"
 require "pbt/reporter/run_execution"
 
 module Pbt
   module Check
-    class RunnerIterator
-      include Enumerable
-
-      attr_accessor :run_execution
+    class RunnerIterator < DelegateClass(Array)
+      attr_reader :run_execution
 
       # @param source_values [Enumerator]
       # @param property [Property]
@@ -17,14 +16,11 @@ module Pbt
         @property = property
         @next_values = source_values
         @current_index = -1
-      end
-
-      # @return [Enumerator]
-      def enumerator
-        Enumerator.new do |y|
+        enumerator = Enumerator.new do |y|
           @current_index += 1
           y.yield @next_values.next
         end
+        super(enumerator) # delegate `#each` and etc. to enumerator
       end
 
       # @return [Boolean]

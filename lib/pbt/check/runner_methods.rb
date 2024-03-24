@@ -52,7 +52,7 @@ module Pbt
       # @param params [Hash]
       # @return [RunExecution]
       def run_it_in_parallel(property, runner, params)
-        runner.enumerator.map { |val|
+        runner.map { |val|
           actor = property.run(val, params[:use_ractor])
           Case.new(val:, actor:, exception: nil)
         }.each do |c|
