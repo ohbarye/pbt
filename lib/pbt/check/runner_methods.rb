@@ -51,10 +51,11 @@ module Pbt
 
         cases.each do |c|
           c.actor.take
+          runner.handle_result(c)
         rescue => e
           c.exception = e.cause
-        ensure
           runner.handle_result(c)
+          break
         end
 
         runner.run_execution
