@@ -17,6 +17,12 @@ module Pbt
       end
 
       # @param val [Object]
+      # @return [Object]
+      def shrink(val)
+        @arb.shrink(val)
+      end
+
+      # @param val [Object]
       # @param use_ractor [Boolean]
       # @return [Ractor, RactorPretender]
       def run(val, use_ractor)

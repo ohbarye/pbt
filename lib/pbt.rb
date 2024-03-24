@@ -2,7 +2,6 @@
 
 require_relative "pbt/version"
 require_relative "pbt/arbitrary/arbitrary_methods"
-require_relative "pbt/arbitrary/generator"
 require_relative "pbt/check/runner_methods"
 require_relative "pbt/check/property"
 require_relative "pbt/check/configuration"

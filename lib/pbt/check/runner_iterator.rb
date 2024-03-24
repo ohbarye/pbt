@@ -9,9 +9,11 @@ module Pbt
       attr_accessor :run_execution
 
       # @param source_values [Enumerator]
+      # @param shrink [Proc]
       # @param verbose [Boolean]
-      def initialize(source_values, verbose)
+      def initialize(source_values, shrink, verbose)
         @run_execution = Reporter::RunExecution.new(verbose)
+        @shrink = shrink
         @source_values = source_values
       end
 

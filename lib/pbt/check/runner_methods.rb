@@ -39,7 +39,9 @@ module Pbt
       # @param source_values [Enumerator]
       # @return [RunExecution]
       def run_it(property, source_values, params)
-        runner = Check::RunnerIterator.new(source_values, params[:verbose])
+        shrink = ->(val) { property.shrink(val) }
+        # shrink.call(1)
+        runner = Check::RunnerIterator.new(source_values, shrink, params[:verbose])
 
         cases = []
         runner.source_values_enumerator.each do |val|
