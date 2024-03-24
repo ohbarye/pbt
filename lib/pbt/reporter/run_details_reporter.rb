@@ -20,7 +20,7 @@ module Pbt
           end
 
           message << <<~EOS
-            Property failed #{@run_details.failures.size} time(s) in #{@run_details.num_runs} tests
+            Property failed after #{@run_details.num_runs} test(s)
             { seed: #{@run_details.seed} }
             Counterexample: #{@run_details.counterexample}
             Shrunk #{@run_details.num_shrinks} time(s)

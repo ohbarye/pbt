@@ -37,25 +37,32 @@ module Pbt
 
       # @param property [Proc]
       # @param source_values [Enumerator]
+      # @param params [Hash]
       # @return [RunExecution]
       def run_it(property, source_values, params)
-        runner = Check::RunnerIterator.new(source_values, params[:verbose])
-
-        cases = []
-        runner.source_values_enumerator.each do |val|
-          actor = property.run(val, params[:use_ractor])
-          cases << Case.new(val:, actor:, exception: nil)
+        runner = Check::RunnerIterator.new(source_values, property, params[:verbose])
+        while runner.has_next?
+          run_it_in_parallel(property, runner, params)
         end
+        runner.run_execution
+      end
 
-        cases.each do |c|
+      # @param property [Proc]
+      # @param runner [RunnerIterator]
+      # @param params [Hash]
+      # @return [RunExecution]
+      def run_it_in_parallel(property, runner, params)
+        runner.map { |val|
+          actor = property.run(val, params[:use_ractor])
+          Case.new(val:, actor:, exception: nil)
+        }.each do |c|
           c.actor.take
+          runner.handle_result(c)
         rescue => e
           c.exception = e.cause
-        ensure
           runner.handle_result(c)
+          break # Ignore the rest of the cases. Just pick up the first failure.
         end
-
-        runner.run_execution
       end
     end
   end

@@ -1,27 +1,30 @@
 # frozen_string_literal: true
 
+require "pbt/arbitrary/array_arbitrary"
+require "pbt/arbitrary/integer_arbitrary"
+
 module Pbt
   module Arbitrary
     module ArbitraryMethods
-      def integer(low: nil, high: nil)
-        Generator.new do |rng|
-          size = 10000
-          if low && high
-            rng.rand(low..high)
-          else
-            rng.rand(-size..size)
-          end
-        end
+      # @param min [Integer]
+      # @param max [Integer]
+      def integer(min: nil, max: nil)
+        IntegerArbitrary.new(min, max)
       end
 
-      def array(element_generator, min: 0, max: 10, empty: true)
+      # @param max [Integer]
+      def nat(max: nil)
+        IntegerArbitrary.new(0, max)
+      end
+
+      # @param arbitrary [Arbitrary]
+      # @param min [Integer]
+      # @param max [Integer]
+      # @param empty [Boolean]
+      def array(arbitrary, min: 0, max: 10, empty: true)
         raise ArgumentError if min < 0
         min = 1 if min.zero? && !empty
-
-        Generator.new do |rng|
-          amount = rng.rand(min..max)
-          amount.times.map { element_generator.generate(rng) }
-        end
+        ArrayArbitrary.new(arbitrary, min, max)
       end
     end
   end

@@ -8,6 +8,7 @@ module Pbt
       :num_shrinks,
       :seed,
       :counterexample,
+      :counterexample_path,
       :error_message,
       :error_instance,
       :failures,

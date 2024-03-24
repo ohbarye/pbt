@@ -21,18 +21,20 @@ $ gem install pbt
 ## Usage
 
 ```ruby
-# Let's say you have a method that returns just a reciprocal number.
-def reciprocal(number)
+# Let's say you have a method that returns just a multiplicative inverse.
+def multiplicative_inverse(number)
   Rational(1, number)
 end
 
 RSpec.describe Pbt do
   it "works" do
-    # The given block is executed 100 times with different random numbers.
-    # Besides, the block runs in parallel by Ractor.
-    Pbt.property(Pbt.integer) do |number|
-      result = reciprocal(number)
-      raise "Result should be even number" if result * number == 0
+    Pbt.assert do
+      # The given block is executed 100 times with different random numbers.
+      # Besides, the block runs in parallel by Ractor.
+      Pbt.property(Pbt.integer) do |number|
+        result = multiplicative_inverse(number)
+        raise "Result should be the multiplicative inverse of the number" if result * number != 1
+      end
     end
     
     # If the function has a bug, the test fails with a counterexample.
@@ -52,14 +54,14 @@ end
 
 - [ ] More generators
   - https://proper-testing.github.io/apidocs/
-- [ ] Enable to combine generators
-  - e.g. `Pbt::Generator.list(Pbt::Generator.integer)`
 - [ ] More sophisticated syntax for property-based testing
   - e.g. `property(integer) { |number| ... }` (Omit `Pbt` module)
-- [ ] Support for shrinking
 - [ ] Allow to use assertions
   - It's hard to pass assertions like `expect`, `assert` to a Ractor?
 - [ ] Add better examples
+- [x] Enable to combine generators
+  - e.g. `Pbt.array(Pbt.integer)`
+- [x] Support for shrinking
 
 ## Development
 
