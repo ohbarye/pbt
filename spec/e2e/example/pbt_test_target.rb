@@ -11,7 +11,7 @@ module PbtTestTarget
     end
   end
 
-  def self.reciprocal(number)
+  def self.multiplicative_inverse(number)
     # This method raises ZeroDivisionError if number is 0.
     Rational(1, number)
   end

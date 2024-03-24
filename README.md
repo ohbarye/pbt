@@ -21,8 +21,8 @@ $ gem install pbt
 ## Usage
 
 ```ruby
-# Let's say you have a method that returns just a reciprocal number.
-def reciprocal(number)
+# Let's say you have a method that returns just a multiplicative inverse.
+def multiplicative_inverse(number)
   Rational(1, number)
 end
 
@@ -32,8 +32,8 @@ RSpec.describe Pbt do
       # The given block is executed 100 times with different random numbers.
       # Besides, the block runs in parallel by Ractor.
       Pbt.property(Pbt.integer) do |number|
-        result = reciprocal(number)
-        raise "Result should be even number" if result * number == 0
+        result = multiplicative_inverse(number)
+        raise "Result should be the multiplicative inverse of the number" if result * number != 1
       end
     end
     

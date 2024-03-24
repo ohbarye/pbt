@@ -23,8 +23,9 @@ RSpec.describe Pbt do
         it "raises Pbt::PropertyFailure and describes the failure" do
           expect {
             Pbt.assert params: {num_runs: 1} do
-              Pbt.property(Pbt.integer(min: 0, max: 0)) do |numbers|
-                PbtTestTarget.reciprocal(numbers)
+              Pbt.property(Pbt.integer(min: 0, max: 0)) do |number|
+                result = PbtTestTarget.multiplicative_inverse(number)
+                raise "Result should be the multiplicative inverse of the number" if result * number != 1
               end
             end
           }.to raise_error(Pbt::PropertyFailure) do |e|
