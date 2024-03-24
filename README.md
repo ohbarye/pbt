@@ -38,13 +38,13 @@ RSpec.describe Pbt do
     end
     
     # If the function has a bug, the test fails with a counterexample.
-    # For example, the reciprocal method doesn't work for 0 regardless of the behavior is intended or not.
+    # For example, the multiplicative_inverse method doesn't work for 0 regardless of the behavior is intended or not.
     #
     # Pbt::PropertyFailure:
-    #   Property failed 1 time(s) in 100 tests
+    #   Property failed after 23 test(s)
     #   { seed: 11001296583699917659214176011685741769 }
     #   Counterexample: 0
-    #   Shrunk 0 time(s)
+    #   Shrunk 3 time(s)
     #   Got ZeroDivisionError: divided by 0
   end
 end
