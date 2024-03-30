@@ -3,6 +3,7 @@
 require "pbt/arbitrary/array_arbitrary"
 require "pbt/arbitrary/integer_arbitrary"
 require "pbt/arbitrary/tuple_arbitrary"
+require "pbt/arbitrary/fixed_hash_arbitrary"
 
 module Pbt
   module Arbitrary
@@ -31,6 +32,11 @@ module Pbt
       # @param arbs [Array<Pbt::Arbitrary>
       def tuple(*arbs)
         TupleArbitrary.new(*arbs)
+      end
+
+      # @param hash [Hash<Symbol->Pbt::Arbitrary>]
+      def fixed_hash(hash)
+        FixedHashArbitrary.new(hash)
       end
     end
   end

@@ -9,6 +9,47 @@ RSpec.describe Pbt do
     Thread.report_on_exception = true
   end
 
+  describe ".property" do
+    describe "arguments" do
+      it "passes a value that the given single arbitrary generates" do
+        Pbt.assert do
+          Pbt.property(Pbt.integer) do |n|
+            raise unless n.is_a?(Integer)
+          end
+        end
+      end
+
+      it "passes values that the given multiple arbitrary generates" do
+        Pbt.assert do
+          Pbt.property(Pbt.integer, Pbt.integer) do |x, y|
+            raise unless x.is_a?(Integer)
+            raise unless y.is_a?(Integer)
+          end
+        end
+      end
+
+      it "passes values that the given hashed arbitrary generates" do
+        Pbt.assert do
+          # As of Ruby 3.3.0 Ractor doesn't allow to pass keyword arguments to a block.
+          # This should be `Pbt.property(x: Pbt.integer, y: Pbt.integer) do |x: y:|`.
+          Pbt.property(x: Pbt.integer, y: Pbt.integer) do |h|
+            raise unless h.keys == [:x, :y]
+            raise unless h[:x].is_a?(Integer)
+            raise unless h[:y].is_a?(Integer)
+          end
+        end
+      end
+
+      it "doesn't allow to use both positional and keyword arguments" do
+        expect {
+          Pbt.assert do
+            Pbt.property(Pbt.integer, x: Pbt.integer, y: Pbt.integer) { |_| }
+          end
+        }.to raise_error(ArgumentError)
+      end
+    end
+  end
+
   describe "basic usage" do
     it "describes a property" do
       Pbt.assert do
