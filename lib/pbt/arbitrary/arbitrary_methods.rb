@@ -5,6 +5,7 @@ require "pbt/arbitrary/integer_arbitrary"
 require "pbt/arbitrary/tuple_arbitrary"
 require "pbt/arbitrary/fixed_hash_arbitrary"
 require "pbt/arbitrary/choose_arbitrary"
+require "pbt/arbitrary/one_of_arbitrary"
 
 module Pbt
   module Arbitrary
@@ -43,6 +44,11 @@ module Pbt
       # @param range [Range<Integer>]
       def choose(range)
         ChooseArbitrary.new(range)
+      end
+
+      # @param choices [Array]
+      def one_of(*choices)
+        OneOfArbitrary.new(choices)
       end
     end
   end
