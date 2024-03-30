@@ -4,6 +4,7 @@ require "pbt/arbitrary/array_arbitrary"
 require "pbt/arbitrary/integer_arbitrary"
 require "pbt/arbitrary/tuple_arbitrary"
 require "pbt/arbitrary/fixed_hash_arbitrary"
+require "pbt/arbitrary/choose_arbitrary"
 
 module Pbt
   module Arbitrary
@@ -37,6 +38,11 @@ module Pbt
       # @param hash [Hash<Symbol->Pbt::Arbitrary>]
       def fixed_hash(hash)
         FixedHashArbitrary.new(hash)
+      end
+
+      # @param range [Range<Integer>]
+      def choose(range)
+        ChooseArbitrary.new(range)
       end
     end
   end
