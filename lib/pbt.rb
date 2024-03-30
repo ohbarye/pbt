@@ -13,8 +13,9 @@ module Pbt
   extend Check::RunnerMethods
   extend Check::ConfigurationMethods
 
+  # @param arbs [Array<Pbt::Arbitrary>]
   # @return [Property]
-  def self.property(generator, &predicate)
-    Check::Property.new(generator, &predicate)
+  def self.property(*arbs, &predicate)
+    Check::Property.new(*arbs, &predicate)
   end
 end
