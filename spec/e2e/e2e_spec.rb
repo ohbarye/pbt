@@ -19,6 +19,16 @@ RSpec.describe Pbt do
     end
 
     describe "property failure" do
+      it "describes a property" do
+        Pbt.assert do
+          Pbt.property(Pbt.integer, Pbt.integer) do |x, y|
+            raise if PbtTestTarget.biggest([x, y]) != [x, y].max
+          end
+        end
+      end
+    end
+
+    describe "property failure" do
       context "no shrinking" do
         it "raises Pbt::PropertyFailure and describes the failure" do
           expect {

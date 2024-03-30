@@ -3,7 +3,7 @@
 module Pbt
   module Check
     class Property
-      # @param arb [Pbt::Arbitrary::Generator]
+      # @param arb [Array<Pbt::Arbitrary>]
       # @param predicate [Proc]
       def initialize(arb, &predicate)
         @arb = arb

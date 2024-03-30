@@ -2,6 +2,7 @@
 
 require "pbt/arbitrary/array_arbitrary"
 require "pbt/arbitrary/integer_arbitrary"
+require "pbt/arbitrary/tuple_arbitrary"
 
 module Pbt
   module Arbitrary
@@ -25,6 +26,11 @@ module Pbt
         raise ArgumentError if min < 0
         min = 1 if min.zero? && !empty
         ArrayArbitrary.new(arbitrary, min, max)
+      end
+
+      # @param arbs [Array<Pbt::Arbitrary>
+      def tuple(*arbs)
+        TupleArbitrary.new(*arbs)
       end
     end
   end

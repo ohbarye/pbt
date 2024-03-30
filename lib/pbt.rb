@@ -13,8 +13,15 @@ module Pbt
   extend Check::RunnerMethods
   extend Check::ConfigurationMethods
 
+  # @param arbs [Array<Pbt::Arbitrary>]
   # @return [Property]
-  def self.property(generator, &predicate)
-    Check::Property.new(generator, &predicate)
+  def self.property(*arbs, &predicate)
+    arb = if arbs.size == 1
+      arbs.first
+    else
+      # wrap by tuple arbitrary so that property class doesn't have to take care of an array
+      tuple(*arbs)
+    end
+    Check::Property.new(arb, &predicate)
   end
 end
