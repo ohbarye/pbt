@@ -15,7 +15,7 @@ RSpec.describe Pbt::Arbitrary::ArrayArbitrary do
 
     it "generates an array of given arbitrary" do
       val = Pbt::Arbitrary::ArrayArbitrary.new(Pbt.integer).generate(Random.new)
-      val.all? { |e| expect(e).to be_a(Integer) }
+      val.each { |e| expect(e).to be_a(Integer) }
     end
 
     it "allows to specify size with min and max" do

@@ -21,8 +21,8 @@ RSpec.describe Pbt do
     describe "property failure" do
       it "describes a property" do
         Pbt.assert do
-          Pbt.property(Pbt.integer, Pbt.integer) do |n1, n2 = 1| # TODO: remove default value
-            raise if PbtTestTarget.biggest([n1, n2]) != [n1, n2].max
+          Pbt.property(Pbt.integer, Pbt.integer) do |x, y|
+            raise if PbtTestTarget.biggest([x, y]) != [x, y].max
           end
         end
       end

@@ -3,11 +3,10 @@
 module Pbt
   module Check
     class Property
-      # @param arbs [Array<Pbt::Arbitrary>]
+      # @param arb [Array<Pbt::Arbitrary>]
       # @param predicate [Proc]
-      def initialize(*arbs, &predicate)
-        p arbs
-        @arb = arbs[0] # TODO: Support multiple arbs after implementing TupleArbitrary
+      def initialize(arb, &predicate)
+        @arb = arb
         @predicate = predicate
       end
 
