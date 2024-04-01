@@ -61,6 +61,18 @@ module Pbt
       def printable_ascii_char
         one_of(*PRINTABLE_ASCII_CHARS)
       end
+
+      def ascii_char
+        one_of(*ASCII_CHARS)
+      end
+
+      def alphanumeric_char
+        one_of(*ALPHANUMERIC_CHARS)
+      end
+
+      def printable_char
+        one_of(*PRINTABLE_CHARS)
+      end
     end
   end
 end
