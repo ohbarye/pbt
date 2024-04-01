@@ -50,6 +50,11 @@ module Pbt
       def one_of(*choices)
         OneOfArbitrary.new(choices)
       end
+
+      # Generates a single unicode character (including printable and non-printable).
+      def char
+        CharArbitrary.new
+      end
     end
   end
 end
