@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
+require "pbt/arbitrary/constant"
 require "pbt/arbitrary/array_arbitrary"
+require "pbt/arbitrary/char_arbitrary"
 require "pbt/arbitrary/integer_arbitrary"
 require "pbt/arbitrary/tuple_arbitrary"
 require "pbt/arbitrary/fixed_hash_arbitrary"
@@ -54,6 +56,10 @@ module Pbt
       # Generates a single unicode character (including printable and non-printable).
       def char
         CharArbitrary.new
+      end
+
+      def printable_ascii_char
+        one_of(*PRINTABLE_ASCII_CHARS)
       end
     end
   end
