@@ -11,5 +11,10 @@ module Pbt
       *("\u{E000}".."\u{FFFD}"),
       *("\u{10000}".."\u{10FFFF}")
     ].freeze
+
+    CHAR_MAPPER = ->(v) { [v].pack("U") }
+    CHAR_UNMAPPER = ->(v) { v.unpack1("U") }
+    STRING_MAPPER = ->(v) { v.join }
+    STRING_UNMAPPER = ->(v) { v.chars }
   end
 end

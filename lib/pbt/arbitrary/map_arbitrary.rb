@@ -2,34 +2,26 @@
 
 module Pbt
   module Arbitrary
-    class StringArbitrary
+    class MapArbitrary < Arbitrary
       # @param arb [ArrayArbitrary]
-      def initialize(arb)
+      def initialize(arb, mapper, unmapper)
         @arb = arb
+        @mapper = mapper
+        @unmapper = unmapper
       end
 
       # @return [Array]
       def generate(rng)
-        map(@arb.generate(rng))
+        @mapper.call(@arb.generate(rng))
       end
 
       # @return [Enumerator]
       def shrink(current)
         Enumerator.new do |y|
-          @arb.shrink(unmap(current)).each do |v|
-            y.yield map(v)
+          @arb.shrink(@unmapper.call(current)).each do |v|
+            y.yield @mapper.call(v)
           end
         end
-      end
-
-      private
-
-      def map(v)
-        v.join
-      end
-
-      def unmap(v)
-        v.chars
       end
     end
   end

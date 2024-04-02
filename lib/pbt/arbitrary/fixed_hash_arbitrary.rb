@@ -2,7 +2,7 @@
 
 module Pbt
   module Arbitrary
-    class FixedHashArbitrary
+    class FixedHashArbitrary < Arbitrary
       # @param hash [Hash<Symbol->Pbt::Arbitrary>]
       def initialize(hash)
         @keys = hash.keys
