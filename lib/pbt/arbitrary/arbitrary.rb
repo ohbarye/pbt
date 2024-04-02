@@ -23,6 +23,11 @@ module Pbt
       def map(mapper, unmapper)
         MapArbitrary.new(self, mapper, unmapper)
       end
+
+      # @param refinement [Proc] a function to filter the generated value and shrunken values.
+      def filter(&refinement)
+        FilterArbitrary.new(self, &refinement)
+      end
     end
   end
 end

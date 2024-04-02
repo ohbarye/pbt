@@ -9,6 +9,7 @@ require "pbt/arbitrary/fixed_hash_arbitrary"
 require "pbt/arbitrary/choose_arbitrary"
 require "pbt/arbitrary/one_of_arbitrary"
 require "pbt/arbitrary/map_arbitrary"
+require "pbt/arbitrary/filter_arbitrary"
 
 module Pbt
   module Arbitrary
