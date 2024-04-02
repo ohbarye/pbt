@@ -8,6 +8,7 @@ require "pbt/arbitrary/tuple_arbitrary"
 require "pbt/arbitrary/fixed_hash_arbitrary"
 require "pbt/arbitrary/choose_arbitrary"
 require "pbt/arbitrary/one_of_arbitrary"
+require "pbt/arbitrary/string_arbitrary"
 
 module Pbt
   module Arbitrary
@@ -58,20 +59,36 @@ module Pbt
         CharArbitrary.new
       end
 
-      def printable_ascii_char
-        one_of(*PRINTABLE_ASCII_CHARS)
+      def alphanumeric_char
+        one_of(*ALPHANUMERIC_CHARS)
+      end
+
+      def alphanumeric_string(**)
+        StringArbitrary.new(array(alphanumeric_char, **))
       end
 
       def ascii_char
         one_of(*ASCII_CHARS)
       end
 
-      def alphanumeric_char
-        one_of(*ALPHANUMERIC_CHARS)
+      def ascii_string(**)
+        StringArbitrary.new(array(ascii_char, **))
+      end
+
+      def printable_ascii_char
+        one_of(*PRINTABLE_ASCII_CHARS)
+      end
+
+      def printable_ascii_string(**)
+        StringArbitrary.new(array(printable_ascii_char, **))
       end
 
       def printable_char
         one_of(*PRINTABLE_CHARS)
+      end
+
+      def printable_string(**)
+        StringArbitrary.new(array(printable_char, **))
       end
     end
   end
