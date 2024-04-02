@@ -63,32 +63,32 @@ module Pbt
         one_of(*ALPHANUMERIC_CHARS)
       end
 
-      def alphanumeric_string(**)
-        StringArbitrary.new(array(alphanumeric_char, **))
+      def alphanumeric_string(**kwargs)
+        StringArbitrary.new(array(alphanumeric_char, **kwargs))
       end
 
       def ascii_char
         one_of(*ASCII_CHARS)
       end
 
-      def ascii_string(**)
-        StringArbitrary.new(array(ascii_char, **))
+      def ascii_string(**kwargs)
+        StringArbitrary.new(array(ascii_char, **kwargs))
       end
 
       def printable_ascii_char
         one_of(*PRINTABLE_ASCII_CHARS)
       end
 
-      def printable_ascii_string(**)
-        StringArbitrary.new(array(printable_ascii_char, **))
+      def printable_ascii_string(**kwargs)
+        StringArbitrary.new(array(printable_ascii_char, **kwargs))
       end
 
       def printable_char
         one_of(*PRINTABLE_CHARS)
       end
 
-      def printable_string(**)
-        StringArbitrary.new(array(printable_char, **))
+      def printable_string(**kwargs)
+        StringArbitrary.new(array(printable_char, **kwargs))
       end
     end
   end
