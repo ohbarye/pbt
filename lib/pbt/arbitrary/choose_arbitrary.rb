@@ -2,7 +2,7 @@
 
 module Pbt
   module Arbitrary
-    class ChooseArbitrary
+    class ChooseArbitrary < Arbitrary
       # @param range [Range<Integer>]
       def initialize(range)
         @range = range

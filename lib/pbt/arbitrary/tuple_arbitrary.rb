@@ -2,7 +2,7 @@
 
 module Pbt
   module Arbitrary
-    class TupleArbitrary
+    class TupleArbitrary < Arbitrary
       # @param arbs [Array<Pbt::Arbitrary>]
       def initialize(*arbs)
         @arbs = arbs

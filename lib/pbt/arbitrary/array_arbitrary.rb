@@ -2,7 +2,7 @@
 
 module Pbt
   module Arbitrary
-    class ArrayArbitrary
+    class ArrayArbitrary < Arbitrary
       DEFAULT_MAX_SIZE = 10
 
       # @param min_length [Integer]

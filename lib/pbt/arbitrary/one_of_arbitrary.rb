@@ -2,7 +2,7 @@
 
 module Pbt
   module Arbitrary
-    class OneOfArbitrary
+    class OneOfArbitrary < Arbitrary
       # @param choices [Array]
       def initialize(choices)
         @choices = choices

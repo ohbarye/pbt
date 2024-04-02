@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
+require "pbt/arbitrary/arbitrary"
 require "pbt/arbitrary/constant"
 require "pbt/arbitrary/array_arbitrary"
-require "pbt/arbitrary/char_arbitrary"
 require "pbt/arbitrary/integer_arbitrary"
 require "pbt/arbitrary/tuple_arbitrary"
 require "pbt/arbitrary/fixed_hash_arbitrary"
 require "pbt/arbitrary/choose_arbitrary"
 require "pbt/arbitrary/one_of_arbitrary"
-require "pbt/arbitrary/string_arbitrary"
+require "pbt/arbitrary/map_arbitrary"
 
 module Pbt
   module Arbitrary
@@ -56,7 +56,7 @@ module Pbt
 
       # Generates a single unicode character (including printable and non-printable).
       def char
-        CharArbitrary.new
+        choose(0..0x10FFFF).map(CHAR_MAPPER, CHAR_UNMAPPER)
       end
 
       def alphanumeric_char
@@ -64,7 +64,7 @@ module Pbt
       end
 
       def alphanumeric_string(**kwargs)
-        StringArbitrary.new(array(alphanumeric_char, **kwargs))
+        array(alphanumeric_char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
       end
 
       def ascii_char
@@ -72,7 +72,7 @@ module Pbt
       end
 
       def ascii_string(**kwargs)
-        StringArbitrary.new(array(ascii_char, **kwargs))
+        array(ascii_char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
       end
 
       def printable_ascii_char
@@ -80,7 +80,7 @@ module Pbt
       end
 
       def printable_ascii_string(**kwargs)
-        StringArbitrary.new(array(printable_ascii_char, **kwargs))
+        array(printable_ascii_char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
       end
 
       def printable_char
@@ -88,7 +88,7 @@ module Pbt
       end
 
       def printable_string(**kwargs)
-        StringArbitrary.new(array(printable_char, **kwargs))
+        array(printable_char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
       end
     end
   end

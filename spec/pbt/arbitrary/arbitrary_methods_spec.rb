@@ -1,6 +1,27 @@
 # frozen_string_literal: true
 
 RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
+  describe ".char" do
+    it "generates a character" do
+      val = Pbt.char.generate(Random.new)
+      expect(val).to be_a(String)
+      expect(val.size).to eq(1)
+    end
+
+    describe "#shrink" do
+      it "returns an Enumerator" do
+        arb = Pbt.char
+        val = arb.generate(Random.new)
+        expect(arb.shrink(val)).to be_a(Enumerator)
+      end
+
+      it "returns an Enumerator that iterates characters shrinking towards lower codepoint" do
+        arb = Pbt.char
+        expect(arb.shrink("z").to_a).to eq ["=", "\u001F", "\u0010", "\b", "\u0004", "\u0002", "\u0001", "\u0000"]
+      end
+    end
+  end
+
   describe ".alphanumeric_char" do
     it "generates a character" do
       val = Pbt.alphanumeric_char.generate(Random.new)

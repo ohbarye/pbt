@@ -2,7 +2,7 @@
 
 module Pbt
   module Arbitrary
-    class IntegerArbitrary
+    class IntegerArbitrary < Arbitrary
       DEFAULT_TARGET = 0
       DEFAULT_SIZE = 1000000
 
