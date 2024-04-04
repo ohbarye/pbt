@@ -91,6 +91,10 @@ module Pbt
       def printable_string(**kwargs)
         array(printable_char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
       end
+
+      def symbol(**kwargs)
+        array(one_of(*SYMBOL_SAFE_CHARS), **kwargs).map(SYMBOL_MAPPER, SYMBOL_UNMAPPER)
+      end
     end
   end
 end

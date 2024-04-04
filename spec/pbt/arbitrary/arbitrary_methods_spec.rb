@@ -157,4 +157,25 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       end
     end
   end
+
+  describe ".symbol" do
+    it "generates a symbol" do
+      arb = Pbt.symbol(min: 1, max: 5)
+      aggregate_failures do
+        100.times do
+          val = arb.generate(Random.new)
+          expect(val).to be_a(Symbol)
+          expect(val.size).to be >= 1
+          expect(val.size).to be <= 5
+        end
+      end
+    end
+
+    it "is symbol using symbol safe character only" do
+      val = Pbt.symbol.generate(Random.new)
+      val.to_s.chars.each do |char|
+        expect(Pbt::Arbitrary::SYMBOL_SAFE_CHARS).to include(char)
+      end
+    end
+  end
 end
