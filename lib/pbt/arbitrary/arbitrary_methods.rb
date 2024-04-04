@@ -95,6 +95,10 @@ module Pbt
       def symbol(**kwargs)
         array(one_of(*SYMBOL_SAFE_CHARS), **kwargs).map(SYMBOL_MAPPER, SYMBOL_UNMAPPER)
       end
+
+      def float
+        tuple(integer, integer).map(FLOAT_MAPPER, FLOAT_UNMAPPER)
+      end
     end
   end
 end
