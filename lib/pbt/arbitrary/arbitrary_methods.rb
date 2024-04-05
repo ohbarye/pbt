@@ -2,6 +2,7 @@
 
 require "pbt/arbitrary/arbitrary"
 require "pbt/arbitrary/constant"
+require "pbt/arbitrary/constant_arbitrary"
 require "pbt/arbitrary/array_arbitrary"
 require "pbt/arbitrary/integer_arbitrary"
 require "pbt/arbitrary/tuple_arbitrary"
@@ -115,6 +116,11 @@ module Pbt
 
       def boolean
         one_of(true, false)
+      end
+
+      # @param val [Object]
+      def constant(val)
+        ConstantArbitrary.new(val)
       end
     end
   end
