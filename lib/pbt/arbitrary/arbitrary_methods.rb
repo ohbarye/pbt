@@ -103,6 +103,15 @@ module Pbt
       def set(arbitrary, min: 0, max: nil, empty: true)
         array(arbitrary, min: min, max: max, empty: empty).map(SET_MAPPER, SET_UNMAPPER)
       end
+
+      def hash(*args, **kwargs)
+        if args.size == 2
+          key_arbitrary, value_arbitrary = args
+          array(tuple(key_arbitrary, value_arbitrary), **kwargs).map(HASH_MAPPER, HASH_UNMAPPER)
+        else
+          super # call `Object#hash`
+        end
+      end
     end
   end
 end

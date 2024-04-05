@@ -222,4 +222,28 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       end
     end
   end
+
+  describe ".hash" do
+    it "generates hash" do
+      val = Pbt.hash(Pbt.symbol, Pbt.integer).generate(Random.new)
+      expect(val).to be_a(Hash)
+    end
+
+    describe "#shrink" do
+      it "returns an Enumerator" do
+        arb = Pbt.hash(Pbt.symbol, Pbt.integer)
+        val = arb.generate(Random.new)
+        expect(arb.shrink(val)).to be_a(Enumerator)
+      end
+
+      it "returns an Enumerator that iterates hash shrinking towards empty" do
+        arb = Pbt.hash(Pbt.symbol, Pbt.integer)
+        expect(arb.shrink({a: 10, b: 20, c: -1}).to_a).to eq [
+          {b: 20, c: -1},
+          {c: -1},
+          {}
+        ]
+      end
+    end
+  end
 end

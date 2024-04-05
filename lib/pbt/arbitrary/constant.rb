@@ -23,5 +23,7 @@ module Pbt
     FLOAT_UNMAPPER = ->(v) { [v, 0] }
     SET_MAPPER = ->(v) { v.to_set }
     SET_UNMAPPER = ->(v) { v.to_a }
+    HASH_MAPPER = ->(v) { v.to_h }
+    HASH_UNMAPPER = ->(v) { v.to_a }
   end
 end
