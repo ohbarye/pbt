@@ -180,7 +180,7 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
   end
 
   describe ".float" do
-    it "is float using float safe character only" do
+    it "is generates float" do
       val = Pbt.float.generate(Random.new)
       expect(val).to be_a(Float)
     end
@@ -192,9 +192,33 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
         expect(arb.shrink(val)).to be_a(Enumerator)
       end
 
-      it "returns an Enumerator that iterates shrinking towards target" do
+      it "returns an Enumerator that iterates float shrinking towards zero" do
         arb = Pbt.float
         expect(arb.shrink(-123.123456).to_a).to eq [-61.561728, -30.780864, -15.390432, -7.695216, -3.847608, -1.923804, -0.961902, 0.0]
+      end
+    end
+  end
+
+  describe ".set" do
+    it "generates set" do
+      val = Pbt.set(Pbt.integer).generate(Random.new)
+      expect(val).to be_a(Set)
+    end
+
+    describe "#shrink" do
+      it "returns an Enumerator" do
+        arb = Pbt.set(Pbt.integer)
+        val = arb.generate(Random.new)
+        expect(arb.shrink(val)).to be_a(Enumerator)
+      end
+
+      it "returns an Enumerator that iterates set shrinking towards empty" do
+        arb = Pbt.set(Pbt.integer)
+        expect(arb.shrink(Set.new([10, 20, -44])).to_a).to eq [
+          Set.new([20, -44]),
+          Set.new([-44]),
+          Set.new([])
+        ]
       end
     end
   end

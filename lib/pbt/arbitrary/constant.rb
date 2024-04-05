@@ -21,5 +21,7 @@ module Pbt
     SYMBOL_UNMAPPER = ->(v) { v.to_s.chars }
     FLOAT_MAPPER = ->((x, y)) { x.to_f / (y.to_f.abs + 1.0) }
     FLOAT_UNMAPPER = ->(v) { [v, 0] }
+    SET_MAPPER = ->(v) { v.to_set }
+    SET_UNMAPPER = ->(v) { v.to_a }
   end
 end

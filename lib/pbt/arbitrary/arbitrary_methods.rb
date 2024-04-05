@@ -99,6 +99,10 @@ module Pbt
       def float
         tuple(integer, integer).map(FLOAT_MAPPER, FLOAT_UNMAPPER)
       end
+
+      def set(arbitrary, min: 0, max: nil, empty: true)
+        array(arbitrary, min: min, max: max, empty: empty).map(SET_MAPPER, SET_UNMAPPER)
+      end
     end
   end
 end
