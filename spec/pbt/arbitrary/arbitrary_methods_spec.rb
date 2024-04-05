@@ -267,4 +267,24 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       end
     end
   end
+
+  describe ".nil" do
+    it "generates nil" do
+      val = Pbt.nil.generate(Random.new)
+      expect(val).to eq(nil)
+    end
+
+    describe "#shrink" do
+      it "returns an Enumerator" do
+        arb = Pbt.nil
+        val = arb.generate(Random.new)
+        expect(arb.shrink(val)).to be_a(Enumerator)
+      end
+
+      it "returns an empty Enumerator" do
+        arb = Pbt.nil
+        expect(arb.shrink(nil).to_a).to eq []
+      end
+    end
+  end
 end

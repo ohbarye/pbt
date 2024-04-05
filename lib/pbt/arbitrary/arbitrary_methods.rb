@@ -122,6 +122,10 @@ module Pbt
       def constant(val)
         ConstantArbitrary.new(val)
       end
+
+      def nil
+        constant(nil)
+      end
     end
   end
 end
