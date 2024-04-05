@@ -112,6 +112,10 @@ module Pbt
           super # call `Object#hash`
         end
       end
+
+      def boolean
+        one_of(true, false)
+      end
     end
   end
 end

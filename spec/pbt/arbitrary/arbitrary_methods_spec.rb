@@ -246,4 +246,25 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       end
     end
   end
+
+  describe ".boolean" do
+    it "generates boolean" do
+      val = Pbt.boolean.generate(Random.new)
+      expect([true, false]).to include(val)
+    end
+
+    describe "#shrink" do
+      it "returns an Enumerator" do
+        arb = Pbt.boolean
+        val = arb.generate(Random.new)
+        expect(arb.shrink(val)).to be_a(Enumerator)
+      end
+
+      it "returns an Enumerator that iterates boolean shrinking towards true" do
+        arb = Pbt.boolean
+        expect(arb.shrink(false).to_a).to eq [true]
+        expect(arb.shrink(true).to_a).to eq []
+      end
+    end
+  end
 end
