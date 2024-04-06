@@ -25,6 +25,12 @@ module Pbt
       # @return [RunDetails]
       def check(property, params: {})
         config = Pbt.configuration.to_h.merge(params.to_h)
+
+        original_report_on_exception = Thread.report_on_exception
+        if original_report_on_exception != config[:thread_report_on_exception]
+          Thread.report_on_exception = config[:thread_report_on_exception]
+        end
+
         initial_values = toss(property, config[:seed])
         source_values = Enumerator.new(config[:num_runs]) do |y|
           config[:num_runs].times do
@@ -33,6 +39,8 @@ module Pbt
         end
 
         run_it(property, source_values, config).to_run_details(config)
+      ensure
+        Thread.report_on_exception = original_report_on_exception
       end
 
       # @param property [Proc]

@@ -3,12 +3,6 @@
 require_relative "example/pbt_test_target"
 
 RSpec.describe Pbt do
-  around do |ex|
-    Thread.report_on_exception = false
-    ex.run
-    Thread.report_on_exception = true
-  end
-
   describe ".property" do
     describe "arguments" do
       it "passes a value that the given single arbitrary generates" do
