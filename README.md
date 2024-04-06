@@ -6,16 +6,14 @@ A property-based testing tool for Ruby, utilizing Ractor for parallelizing test 
 
 ## Installation
 
-Install the gem and add to the application's Gemfile by executing:
-
-```shell
-$ bundle add pbt
-```
-
-If bundler is not being used to manage dependencies, install the gem by executing:
-
 ```shell
 $ gem install pbt
+```
+
+If you want to use concurrency methods other than Ractor (`process`, `thread`), you need to install [parallel](https://github.com/grosser/parallel) gem as well.
+
+```shell
+$ gem install parallel
 ```
 
 ## Usage
@@ -50,18 +48,77 @@ RSpec.describe Pbt do
 end
 ```
 
+### Arbitrary
+
+TBA
+
+### Configuration
+
+TBA
+
+### Concurrent methods
+
+Pbt supports 3 concurrency methods and 1 sequential one. You can choose one of them by setting the `concurrency_method` option.
+
+#### Ractor
+
+```ruby
+Pbt.assert(params: { concurrency_method: :ractor }) do
+  Pbt.property(Pbt.integer) do |number|
+    # ...
+  end
+end
+```
+
+#### Process
+
+```ruby
+Pbt.assert(params: { concurrency_method: :process }) do
+  Pbt.property(Pbt.integer) do |number|
+    # ...
+  end
+end
+```
+
+#### Thread
+
+```ruby
+Pbt.assert(params: { concurrency_method: :thread }) do
+  Pbt.property(Pbt.integer) do |number|
+    # ...
+  end
+end
+```
+
+#### None
+
+```ruby
+Pbt.assert(params: { concurrency_method: :none }) do
+  Pbt.property(Pbt.integer) do |number|
+    # ...
+  end
+end
+```
+
 ## TODOs
 
-- [ ] More generators
+- [x] Enable to combine arbitraries (e.g. `Pbt.array(Pbt.integer)`)
+- [x] Support shrinking
+- [x] Implement basic arbitraries
   - https://proper-testing.github.io/apidocs/
-- [ ] More sophisticated syntax for property-based testing
-  - e.g. `property(integer) { |number| ... }` (Omit `Pbt` module)
-- [ ] Allow to use assertions
-  - It's hard to pass assertions like `expect`, `assert` to a Ractor?
-- [ ] Add better examples
-- [x] Enable to combine generators
-  - e.g. `Pbt.array(Pbt.integer)`
-- [x] Support for shrinking
+  - https://fast-check.dev/docs/core-blocks/arbitraries/
+- [x] Support multiple concurrency methods
+  - [x] Ractor
+  - [x] Process
+  - [x] Thread
+  - [x] None (Run tests sequentially)
+- [ ] Rich report like verbose mode
+- [ ] Allow to use assertions provided by RSpec etc. if possible
+  - It'd be so hard to pass assertions like `expect`, `assert` to a Ractor. But it's worth trying at least for `process`, `thread` concurrency methods.
+- [ ] Documentation
+  - [ ] Add better examples
+  - [ ] Arbitrary usage
+  - [ ] Configuration
 
 ## Development
 
@@ -69,9 +126,15 @@ After checking out the repo, run `bin/setup` to install dependencies. Then, run 
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
+### Lint
+
+```shell
+bundle exec rake standard:fix
+```
+
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/pbt. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/pbt/blob/master/CODE_OF_CONDUCT.md).
+Bug reports and pull requests are welcome on GitHub at https://github.com/ohbarye/pbt. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/pbt/blob/master/CODE_OF_CONDUCT.md).
 
 ## License
 
@@ -79,4 +142,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the Pbt project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/pbt/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the Pbt project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/ohbarye/pbt/blob/master/CODE_OF_CONDUCT.md).

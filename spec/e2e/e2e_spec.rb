@@ -3,12 +3,6 @@
 require_relative "example/pbt_test_target"
 
 RSpec.describe Pbt do
-  around do |ex|
-    Thread.report_on_exception = false
-    ex.run
-    Thread.report_on_exception = true
-  end
-
   describe ".property" do
     describe "arguments" do
       it "passes a value that the given single arbitrary generates" do
@@ -81,7 +75,7 @@ RSpec.describe Pbt do
             end
           }.to raise_error(Pbt::PropertyFailure) do |e|
             [
-              "Property failed after 1 test(s)\n",
+              "Property failed after 2 test(s)\n",
               "{ seed: ",
               "Counterexample: 0\n",
               "Shrunk 0 time(s)\n",

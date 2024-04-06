@@ -23,22 +23,15 @@ module Pbt
       end
 
       # @param val [Object]
-      # @param use_ractor [Boolean]
-      # @return [Ractor, RactorPretender]
-      def run(val, use_ractor)
-        if use_ractor
-          Ractor.new(val, &@predicate)
-        else
-          RactorPretender.new(val: val, predicate: @predicate)
-        end
+      # @return [void]
+      def run(val)
+        @predicate.call(val)
       end
 
-      RactorPretender = Struct.new(:val, :predicate, keyword_init: true) do
-        def take
-          predicate.call(val)
-        rescue => cause
-          raise StandardError.new("Wrapped error. See cause"), cause: cause
-        end
+      # @param val [Object]
+      # @return [Ractor]
+      def run_in_ractor(val)
+        Ractor.new(val, &@predicate)
       end
     end
   end
