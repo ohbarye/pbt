@@ -4,6 +4,7 @@ require "date"
 
 module Pbt
   module Arbitrary
+    CHAR_RANGE = (0..0x10FFFF)
     SYMBOL_SAFE_CHARS = [*("a".."z"), "-"].freeze
     ALPHANUMERIC_CHARS = [*("a".."z"), *("A".."Z"), *("0".."9")].freeze
     PRINTABLE_ASCII_CHARS = [*(" ".."~")].freeze

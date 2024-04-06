@@ -58,7 +58,11 @@ module Pbt
 
       # Generates a single unicode character (including printable and non-printable).
       def char
-        choose(0..0x10FFFF).map(CHAR_MAPPER, CHAR_UNMAPPER)
+        choose(CHAR_RANGE).map(CHAR_MAPPER, CHAR_UNMAPPER)
+      end
+
+      def string(**kwargs)
+        array(char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
       end
 
       def alphanumeric_char

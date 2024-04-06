@@ -22,6 +22,27 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
     end
   end
 
+  describe ".string" do
+    it "generates a string" do
+      arb = Pbt.string(min: 1, max: 5)
+      aggregate_failures do
+        100.times do
+          val = arb.generate(Random.new)
+          expect(val).to be_a(String)
+          expect(val.size).to be >= 1
+          expect(val.size).to be <= 5
+        end
+      end
+    end
+
+    it "is string" do
+      val = Pbt.string.generate(Random.new)
+      val.chars.each do |char|
+        expect(Pbt::Arbitrary::CHAR_RANGE).to include(char.unpack1("U"))
+      end
+    end
+  end
+
   describe ".alphanumeric_char" do
     it "generates a character" do
       val = Pbt.alphanumeric_char.generate(Random.new)
