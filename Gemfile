@@ -7,3 +7,4 @@ gemspec
 gem "rake"
 gem "rspec"
 gem "standard"
+gem "parallel"

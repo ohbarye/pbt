@@ -17,8 +17,10 @@ module Pbt
         @next_values = source_values
         @current_index = -1
         enumerator = Enumerator.new do |y|
-          @current_index += 1
-          y.yield @next_values.next
+          loop do
+            @current_index += 1
+            y.yield @next_values.next
+          end
         end
         super(enumerator) # delegate `#each` and etc. to enumerator
       end

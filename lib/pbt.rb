@@ -9,6 +9,8 @@ require_relative "pbt/check/configuration"
 module Pbt
   class PropertyFailure < StandardError; end
 
+  class InvalidConfiguration < StandardError; end
+
   extend Arbitrary::ArbitraryMethods
   extend Check::RunnerMethods
   extend Check::ConfigurationMethods
