@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "date"
+
 module Pbt
   module Arbitrary
     SYMBOL_SAFE_CHARS = [*("a".."z"), "-"].freeze
@@ -25,5 +27,9 @@ module Pbt
     SET_UNMAPPER = ->(v) { v.to_a }
     HASH_MAPPER = ->(v) { v.to_h }
     HASH_UNMAPPER = ->(v) { v.to_a }
+    DATE_MAPPER = ->(epoch) { ->(v) { epoch + v } }
+    DATE_UNMAPPER = ->(epoch) { ->(v) { (v - epoch).to_i } }
+    TIME_MAPPER = DATE_MAPPER
+    TIME_UNMAPPER = DATE_UNMAPPER
   end
 end

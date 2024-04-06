@@ -126,6 +126,32 @@ module Pbt
       def nil
         constant(nil)
       end
+
+      def date(base_date: Date.today, past_offset_days: -18250, future_offset_days: 18250)
+        offset_arb = integer(min: past_offset_days, max: future_offset_days)
+        offset_arb.map(DATE_MAPPER.call(base_date), DATE_UNMAPPER.call(base_date))
+      end
+
+      def past_date(base_date: Date.today, past_offset_days: -18250)
+        date(base_date: base_date, past_offset_days: past_offset_days, future_offset_days: 0)
+      end
+
+      def future_date(base_date: Date.today, future_offset_days: 18250)
+        date(base_date: base_date, past_offset_days: 0, future_offset_days: future_offset_days)
+      end
+
+      def time(base_time: Time.now, past_offset_seconds: -1576800000, future_offset_seconds: 1576800000)
+        offset_arb = integer(min: past_offset_seconds, max: future_offset_seconds)
+        offset_arb.map(TIME_MAPPER.call(base_time), TIME_UNMAPPER.call(base_time))
+      end
+
+      def past_time(base_time: Time.now, past_offset_seconds: -1576800000)
+        time(base_time: base_time, past_offset_seconds: past_offset_seconds, future_offset_seconds: 0)
+      end
+
+      def future_time(base_time: Time.now, future_offset_seconds: 1576800000)
+        time(base_time: base_time, past_offset_seconds: 0, future_offset_seconds: future_offset_seconds)
+      end
     end
   end
 end

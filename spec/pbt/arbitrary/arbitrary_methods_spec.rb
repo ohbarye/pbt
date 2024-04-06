@@ -287,4 +287,175 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       end
     end
   end
+
+  describe ".date" do
+    it "generates date" do
+      val = Pbt.date.generate(Random.new)
+      expect(val).to be_a(Date)
+    end
+
+    it "generates date within specified offset" do
+      base = Date.new(2024, 4, 20)
+      arb = Pbt.date(base_date: base, past_offset_days: -10, future_offset_days: 5)
+      aggregate_failures do
+        100.times do
+          val = arb.generate(Random.new)
+          expect(val).to be >= Date.new(2024, 4, 10)
+          expect(val).to be <= Date.new(2024, 4, 25)
+        end
+      end
+    end
+
+    describe "#shrink" do
+      it "returns an Enumerator" do
+        arb = Pbt.date
+        val = arb.generate(Random.new)
+        expect(arb.shrink(val)).to be_a(Enumerator)
+      end
+
+      it "returns an Enumerator that iterates date shrinking towards base_date" do
+        arb = Pbt.date(base_date: Date.new(2024, 4, 6))
+        expect(arb.shrink(Date.new(2024, 4, 20)).to_a).to eq [
+          Date.new(2024, 4, 13),
+          Date.new(2024, 4, 10),
+          Date.new(2024, 4, 8),
+          Date.new(2024, 4, 7),
+          Date.new(2024, 4, 6)
+        ]
+      end
+    end
+  end
+
+  describe ".past_date" do
+    it "generates past_date" do
+      val = Pbt.past_date.generate(Random.new)
+      expect(val).to be_a(Date)
+    end
+
+    it "generates past_date within specified offset" do
+      base = Date.new(2024, 4, 20)
+      arb = Pbt.past_date(base_date: base, past_offset_days: -10)
+      aggregate_failures do
+        100.times do
+          val = arb.generate(Random.new)
+          expect(val).to be >= Date.new(2024, 4, 10)
+          expect(val).to be <= base
+        end
+      end
+    end
+  end
+
+  describe ".future_date" do
+    it "generates future_date" do
+      val = Pbt.future_date.generate(Random.new)
+      expect(val).to be_a(Date)
+    end
+
+    it "generates future_date within specified offset" do
+      base = Date.new(2024, 4, 20)
+      arb = Pbt.future_date(base_date: base, future_offset_days: 5)
+      aggregate_failures do
+        100.times do
+          val = arb.generate(Random.new)
+          expect(val).to be >= base
+          expect(val).to be <= Date.new(2024, 4, 25)
+        end
+      end
+    end
+  end
+
+  describe ".time" do
+    it "generates time" do
+      val = Pbt.time.generate(Random.new)
+      expect(val).to be_a(Time)
+    end
+
+    it "generates time within specified offset" do
+      base = Time.new(2024, 1, 2, 3, 4, 5)
+
+      arb = Pbt.time(base_time: base, past_offset_seconds: -86400, future_offset_seconds: 3600)
+      aggregate_failures do
+        100.times do
+          val = arb.generate(Random.new)
+          expect(val).to be >= Time.new(2024, 1, 1, 3, 4, 5)
+          expect(val).to be <= Time.new(2024, 1, 2, 4, 4, 5)
+        end
+      end
+    end
+
+    describe "#shrink" do
+      it "returns an Enumerator" do
+        arb = Pbt.time
+        val = arb.generate(Random.new)
+        expect(arb.shrink(val)).to be_a(Enumerator)
+      end
+
+      it "returns an Enumerator that iterates time shrinking towards base_time" do
+        arb = Pbt.time(base_time: Time.new(2024, 1, 2, 3, 4, 5))
+        expect(arb.shrink(Time.new(2024, 2, 1)).to_a).to eq [
+          Time.new(2024, 1, 17, 0o1, 32, 3),
+          Time.new(2024, 1, 9, 14, 18, 4),
+          Time.new(2024, 1, 5, 20, 41, 5),
+          Time.new(2024, 1, 3, 23, 52, 35),
+          Time.new(2024, 1, 3, 1, 28, 20),
+          Time.new(2024, 1, 2, 14, 16, 13),
+          Time.new(2024, 1, 2, 8, 40, 9),
+          Time.new(2024, 1, 2, 5, 52, 7),
+          Time.new(2024, 1, 2, 4, 28, 6),
+          Time.new(2024, 1, 2, 3, 46, 6),
+          Time.new(2024, 1, 2, 3, 25, 6),
+          Time.new(2024, 1, 2, 3, 14, 36),
+          Time.new(2024, 1, 2, 3, 9, 21),
+          Time.new(2024, 1, 2, 3, 6, 43),
+          Time.new(2024, 1, 2, 3, 5, 24),
+          Time.new(2024, 1, 2, 3, 4, 45),
+          Time.new(2024, 1, 2, 3, 4, 25),
+          Time.new(2024, 1, 2, 3, 4, 15),
+          Time.new(2024, 1, 2, 3, 4, 10),
+          Time.new(2024, 1, 2, 3, 4, 8),
+          Time.new(2024, 1, 2, 3, 4, 7),
+          Time.new(2024, 1, 2, 3, 4, 6),
+          Time.new(2024, 1, 2, 3, 4, 5)
+        ]
+      end
+    end
+  end
+
+  describe ".past_time" do
+    it "generates past_time" do
+      val = Pbt.past_time.generate(Random.new)
+      expect(val).to be_a(Time)
+    end
+
+    it "generates past_time within specified offset" do
+      base = Time.new(2024, 1, 2, 3, 4, 5)
+      arb = Pbt.past_time(base_time: base, past_offset_seconds: -10)
+      aggregate_failures do
+        100.times do
+          val = arb.generate(Random.new)
+          expect(val).to be >= Time.new(2024, 1, 2, 3, 3, 55)
+          expect(val).to be <= base
+        end
+      end
+    end
+  end
+
+  describe ".future_time" do
+    it "generates future_time" do
+      val = Pbt.future_time.generate(Random.new)
+      expect(val).to be_a(Time)
+    end
+
+    it "generates future_time within specified offset" do
+      base = Time.new(2024, 1, 2, 3, 4, 5)
+      arb = Pbt.future_time(base_time: base, future_offset_seconds: 5)
+      aggregate_failures do
+        100.times do
+          val = arb.generate(Random.new)
+          expect(val).to be >= base
+          expect(val).to be <= Time.new(2024, 1, 2, 3, 4, 10)
+        end
+      end
+    end
+  end
 end
