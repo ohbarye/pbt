@@ -23,7 +23,7 @@ module Pbt
 
       # @param max [Integer]
       def nat(max: nil)
-        IntegerArbitrary.new(0, max)
+        integer(min: 0, max: max)
       end
 
       # @param arbitrary [Arbitrary]
