@@ -56,13 +56,18 @@ module Pbt
         OneOfArbitrary.new(choices)
       end
 
+      # One lowercase hexadecimal character
+      def hexa
+        one_of(*HEXA_CHARS)
+      end
+
+      def hexa_string(**kwargs)
+        array(hexa, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
+      end
+
       # Generates a single unicode character (including printable and non-printable).
       def char
         choose(CHAR_RANGE).map(CHAR_MAPPER, CHAR_UNMAPPER)
-      end
-
-      def string(**kwargs)
-        array(char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
       end
 
       def alphanumeric_char
