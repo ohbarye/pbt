@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "date"
+require "set" # For 3.1 or prior. Ruby 3.2.0 has Set in the built-in library.
 
 module Pbt
   module Arbitrary
