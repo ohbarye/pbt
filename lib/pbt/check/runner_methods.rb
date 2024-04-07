@@ -28,14 +28,14 @@ module Pbt
         property = property.call
         config = Pbt.configuration.to_h.merge(options.to_h)
 
-        suppress_exception_report_for_ractor(config) do
-          initial_values = toss(property, config[:seed])
-          source_values = Enumerator.new(config[:num_runs]) do |y|
-            config[:num_runs].times do
-              y.yield initial_values.next
-            end
+        initial_values = toss(property, config[:seed])
+        source_values = Enumerator.new(config[:num_runs]) do |y|
+          config[:num_runs].times do
+            y.yield initial_values.next
           end
+        end
 
+        suppress_exception_report_for_ractor(config) do
           run_it(property, source_values, config).to_run_details(config)
         end
       end
