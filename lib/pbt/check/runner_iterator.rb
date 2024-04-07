@@ -15,10 +15,8 @@ module Pbt
         @run_execution = Reporter::RunExecution.new(verbose)
         @property = property
         @next_values = source_values
-        @current_index = -1
         enumerator = Enumerator.new do |y|
           loop do
-            @current_index += 1
             y.yield @next_values.next
           end
         end
@@ -38,8 +36,7 @@ module Pbt
       def handle_result(c)
         if c.exception
           # failed run
-          @run_execution.record_failure(c, @current_index)
-          @current_index = -1
+          @run_execution.record_failure(c)
           @next_values = @property.shrink(c.val)
         else
           # successful run

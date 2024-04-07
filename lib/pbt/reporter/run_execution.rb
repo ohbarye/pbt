@@ -15,8 +15,8 @@ module Pbt
       end
 
       # @param c [Pbt::Check::Case]
-      def record_failure(c, idx)
-        @path_to_failure << idx
+      def record_failure(c)
+        @path_to_failure << c.index
         @failures << c
 
         # value and failure can be updated through shrinking

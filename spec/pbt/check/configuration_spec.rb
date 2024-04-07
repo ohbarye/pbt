@@ -84,11 +84,11 @@ RSpec.describe Pbt::Check::Configuration do
 
             expect(run_details.to_h).to include(
               failed: true,
-              num_runs: 11,
+              num_runs: 3,
               num_shrinks: 1,
               seed:,
               counterexample: 2,
-              counterexample_path: "10:3",
+              counterexample_path: "2:1",
               error_message: "dummy error",
               error_instance: be_a(RuntimeError),
               failures: [anything, anything],
@@ -148,11 +148,11 @@ RSpec.describe Pbt::Check::Configuration do
 
             expect(run_details.to_h).to include(
               failed: true,
-              num_runs: 11,
+              num_runs: 3,
               num_shrinks: 1,
               seed:,
               counterexample: 2,
-              counterexample_path: "10:3",
+              counterexample_path: "2:1",
               error_message: "dummy error",
               error_instance: be_a(RuntimeError),
               failures: [anything, anything],
@@ -212,14 +212,14 @@ RSpec.describe Pbt::Check::Configuration do
 
             expect(run_details.to_h).to include(
               failed: true,
-              num_runs: 11,
-              # num_shrinks: 1,
+              num_runs: 3,
+              num_shrinks: 1,
               seed:,
               counterexample: 2,
-              # counterexample_path: "10:3",
+              counterexample_path: "2:1",
               error_message: "dummy error",
               error_instance: be_a(RuntimeError),
-              # failures: [anything, anything],
+              failures: [anything, anything],
               verbose: false,
               run_configuration: {
                 verbose: false,
@@ -229,10 +229,6 @@ RSpec.describe Pbt::Check::Configuration do
                 thread_report_on_exception: false
               }
             )
-            # Processes run in parallel, so the order of failures is not guaranteed. There are 2 possible results.
-            p1 = run_details.num_shrinks == 1 && run_details.counterexample_path == "10:3" && run_details.failures.size == 2
-            p2 = run_details.num_shrinks == 0 && run_details.counterexample_path == "10" && run_details.failures.size == 1
-            expect(p1 || p2).to eq true
           end
         end
       end
