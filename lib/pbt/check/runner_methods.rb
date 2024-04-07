@@ -11,52 +11,58 @@ module Pbt
       include Check::Tosser
 
       # `assert` runs a property based test and reports its result.
-      # @param name [String]
-      # @param params [Hash]
+      # @param options [Hash]
       # @param property [Proc]
       # @return [void]
-      def assert(name = "", params: {}, &property)
-        out = check(params:, &property)
-        Reporter::RunDetailsReporter.new(name, out).report_run_details
+      def assert(**options, &property)
+        out = check(**options, &property)
+        Reporter::RunDetailsReporter.new(out).report_run_details
       end
 
       # `check` runs a property based test and return its result.
       # Use `assert` unless you want to handle the result.
-      # @param params [Hash]
+      # @param options [Hash]
       # @param property [Proc]
       # @return [RunDetails]
-      def check(params: {}, &property)
+      def check(**options, &property)
         property = property.call
-        config = Pbt.configuration.to_h.merge(params.to_h)
+        config = Pbt.configuration.to_h.merge(options.to_h)
 
-        # If using Ractor, so many exception reports happen in Ractor and a console gets too messy. Suppress them to avoid that.
-        original_report_on_exception = Thread.report_on_exception
-        if config[:concurrency_method] == :ractor && original_report_on_exception != config[:thread_report_on_exception]
-          Thread.report_on_exception = config[:thread_report_on_exception]
-        end
-
-        initial_values = toss(property, config[:seed])
-        source_values = Enumerator.new(config[:num_runs]) do |y|
-          config[:num_runs].times do
-            y.yield initial_values.next
+        suppress_exception_report_for_ractor(config) do
+          initial_values = toss(property, config[:seed])
+          source_values = Enumerator.new(config[:num_runs]) do |y|
+            config[:num_runs].times do
+              y.yield initial_values.next
+            end
           end
-        end
 
-        run_it(property, source_values, config).to_run_details(config)
-      ensure
-        Thread.report_on_exception = original_report_on_exception
+          run_it(property, source_values, config).to_run_details(config)
+        end
       end
 
       private
 
+      # If using Ractor, so many exception reports happen in Ractor and a console gets too messy. Suppress them to avoid that.
+      # @param config [Hash]
+      def suppress_exception_report_for_ractor(config, &block)
+        if config[:concurrency_method] == :ractor
+          original_report_on_exception = Thread.report_on_exception
+          Thread.report_on_exception = config[:thread_report_on_exception]
+        end
+
+        yield
+      ensure
+        Thread.report_on_exception = original_report_on_exception if config[:concurrency_method] == :ractor
+      end
+
       # @param property [Proc]
       # @param source_values [Enumerator]
-      # @param params [Hash]
+      # @param options [Hash]
       # @return [RunExecution]
-      def run_it(property, source_values, params)
-        runner = Check::RunnerIterator.new(source_values, property, params[:verbose])
+      def run_it(property, source_values, options)
+        runner = Check::RunnerIterator.new(source_values, property, options[:verbose])
         while runner.has_next?
-          case params[:concurrency_method]
+          case options[:concurrency_method]
           in :ractor
             run_it_in_ractors(property, runner)
           in :process
