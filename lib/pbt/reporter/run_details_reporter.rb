@@ -3,10 +3,8 @@
 module Pbt
   module Reporter
     class RunDetailsReporter
-      # @param [String] name
       # @param [Pbt::Reporter::RunExecution] run_details
-      def initialize(name, run_details)
-        @name = name
+      def initialize(run_details)
         @run_details = run_details
       end
 
@@ -14,10 +12,6 @@ module Pbt
       def report_run_details
         if @run_details.failed
           message = []
-
-          if @name.length > 0
-            message << "Property name: #{@name}"
-          end
 
           message << <<~EOS
             Property failed after #{@run_details.num_runs} test(s)
