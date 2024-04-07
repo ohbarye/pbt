@@ -29,8 +29,9 @@ module Pbt
         property = property.call
         config = Pbt.configuration.to_h.merge(params.to_h)
 
+        # If using Ractor, so many exception reports happen in Ractor and a console gets too messy. Suppress them to avoid that.
         original_report_on_exception = Thread.report_on_exception
-        if original_report_on_exception != config[:thread_report_on_exception]
+        if config[:concurrency_method] == :ractor && original_report_on_exception != config[:thread_report_on_exception]
           Thread.report_on_exception = config[:thread_report_on_exception]
         end
 

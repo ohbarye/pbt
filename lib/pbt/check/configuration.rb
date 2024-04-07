@@ -15,7 +15,7 @@ module Pbt
         concurrency_method: :ractor,
         num_runs: 100,
         seed: Random.new.seed,
-        thread_report_on_exception: false
+        thread_report_on_exception: true
       )
         super
       end
