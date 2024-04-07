@@ -75,7 +75,7 @@ RSpec.describe Pbt do
             end
           }.to raise_error(Pbt::PropertyFailure) do |e|
             [
-              "Property failed after 2 test(s)\n",
+              "Property failed after 1 test(s)\n",
               "{ seed: ",
               "Counterexample: 0\n",
               "Shrunk 0 time(s)\n",

@@ -74,9 +74,8 @@ module Pbt
       # @param runner [RunnerIterator]
       # @return [void]
       def run_it_in_ractors(property, runner)
-        runner.map { |val|
-          ractor = property.run_in_ractor(val)
-          Case.new(val:, ractor:, exception: nil)
+        runner.map.with_index { |val, index|
+          Case.new(val:, index:, ractor: property.run_in_ractor(val))
         }.each do |c|
           c.ractor.take
           runner.handle_result(c)
@@ -93,22 +92,18 @@ module Pbt
       def run_it_in_threads(property, runner)
         require_parallel
 
-        cases = Parallel.map(runner.to_a, in_threads: Parallel.processor_count) do |val|
-          Case.new(val: val, ractor: nil, exception: nil).tap do |c|
+        Parallel.map_with_index(runner, in_threads: Parallel.processor_count) do |val, index|
+          Case.new(val:, index:).tap do |c|
             property.run(val)
           rescue => e
             c.exception = e
-            raise Parallel::Break, c
-            # Ignore the rest of the cases. Just pick up the first failure.
+            # It's possible to break this loop here by raising `Parallel::Break`.
+            # But if it raises, we cannot fetch all cases' result. So this loop continues until the end.
           end
-        end
-
-        if cases.is_a?(Case)
-          runner.handle_result(cases)
-        else
-          cases.each do |c|
-            runner.handle_result(c)
-          end
+        end.each do |c|
+          runner.handle_result(c)
+          break if c.exception
+          # Ignore the rest of the cases. Just pick up the first failure.
         end
       end
 
@@ -118,22 +113,18 @@ module Pbt
       def run_it_in_processes(property, runner)
         require_parallel
 
-        cases = Parallel.map(runner, in_processes: Parallel.processor_count) do |val|
-          Case.new(val: val, ractor: nil, exception: nil).tap do |c|
+        Parallel.map_with_index(runner, in_processes: Parallel.processor_count) do |val, index|
+          Case.new(val:, index:).tap do |c|
             property.run(val)
           rescue => e
             c.exception = e
-            raise Parallel::Break, c
-            # Ignore the rest of the cases. Just pick up the first failure.
+            # It's possible to break this loop here by raising `Parallel::Break`.
+            # But if it raises, we cannot fetch all cases' result. So this loop continues until the end.
           end
-        end
-
-        if cases.is_a?(Case)
-          runner.handle_result(cases)
-        else
-          cases.each do |c|
-            runner.handle_result(c)
-          end
+        end.each do |c|
+          runner.handle_result(c)
+          break if c.exception
+          # Ignore the rest of the cases. Just pick up the first failure.
         end
       end
 
@@ -141,8 +132,8 @@ module Pbt
       # @param runner [RunnerIterator]
       # @return [void]
       def run_it_in_sequential(property, runner)
-        runner.each do |val|
-          c = Case.new(val:, ractor: nil, exception: nil)
+        runner.each_with_index do |val, index|
+          c = Case.new(val:, index:)
           begin
             property.run(val)
             runner.handle_result(c)
