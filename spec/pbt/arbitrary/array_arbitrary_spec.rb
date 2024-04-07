@@ -36,13 +36,31 @@ RSpec.describe Pbt::Arbitrary::ArrayArbitrary do
       expect(arb.shrink(val)).to be_a(Enumerator)
     end
 
-    it "returns an Enumerator that iterates halved arrays" do
+    it "returns an Enumerator that iterates arrays with shrunken length or value" do
       arb = Pbt::Arbitrary::ArrayArbitrary.new(Pbt.integer)
-      expect(arb.shrink([50, 25, 13, 7, 4, 2, 1]).to_a).to eq [
-        [7, 4, 2, 1],
-        [2, 1],
-        [1],
-        []
+      expect(arb.shrink([3]).to_a).to eq [[], [2], [1], [0]]
+      expect(arb.shrink([2, 0]).to_a).to eq [[2], [0], [], [1, 0], [0, 0]]
+      expect(arb.shrink([13, 7, 9]).to_a).to eq [
+        [13, 7],
+        [7, 9],
+        [13],
+        [7],
+        [9],
+        [],
+        [7, 7, 9],
+        [4, 7, 9],
+        [2, 7, 9],
+        [1, 7, 9],
+        [0, 7, 9],
+        [13, 4, 9],
+        [13, 2, 9],
+        [13, 1, 9],
+        [13, 0, 9],
+        [13, 7, 5],
+        [13, 7, 3],
+        [13, 7, 2],
+        [13, 7, 1],
+        [13, 7, 0]
       ]
     end
 

@@ -103,7 +103,7 @@ module Pbt
       end
 
       def symbol(**kwargs)
-        array(one_of(*SYMBOL_SAFE_CHARS), **kwargs).map(SYMBOL_MAPPER, SYMBOL_UNMAPPER)
+        array(one_of(*SYMBOL_SAFE_CHARS), empty: false, **kwargs).map(SYMBOL_MAPPER, SYMBOL_UNMAPPER)
       end
 
       def float

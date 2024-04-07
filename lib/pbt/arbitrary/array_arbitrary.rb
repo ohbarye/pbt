@@ -22,15 +22,28 @@ module Pbt
         size.times.map { @arbitrary.generate(rng) }
       end
 
+      # Returns shrunken arrays.
+      # This doesn't produce all possible patterns because it could be too large (+1000) even for small arrays.
+      # @param current [Array]
       # @return [Enumerator]
       def shrink(current)
-        return Enumerator.new { |_| } if current.size == 0
+        return Enumerator.new { |_| } if current.size == @min_length
 
-        # TODO: Implement more sophisticated shrinking. It should be shrink each item as well.
         Enumerator.new do |y|
           @length_arb.shrink(current.size).each do |length|
-            slice_start = current.size - length
-            y.yield current[slice_start..]
+            if length == 0
+              y.yield []
+              next
+            end
+            current.each_cons(length) do |con|
+              y.yield con
+            end
+          end
+
+          current.each_with_index do |item, i|
+            @arbitrary.shrink(item).each do |val|
+              y.yield [*current[...i], val, *current[i + 1..]]
+            end
           end
         end
       end

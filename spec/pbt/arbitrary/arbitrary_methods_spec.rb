@@ -256,10 +256,19 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
 
       it "returns an Enumerator that iterates set shrinking towards empty" do
         arb = Pbt.set(Pbt.integer)
-        expect(arb.shrink(Set.new([10, 20, -44])).to_a).to eq [
-          Set.new([20, -44]),
-          Set.new([-44]),
-          Set.new([])
+        expect(arb.shrink(Set.new([1, 2, -4])).to_a).to eq [
+          Set.new([1, 2]),
+          Set.new([2, -4]),
+          Set.new([1]),
+          Set.new([2]),
+          Set.new([-4]),
+          Set.new([]),
+          Set.new([0, 2, -4]),
+          Set.new([1, -4]),
+          Set.new([1, 0, -4]),
+          Set.new([1, 2, -2]),
+          Set.new([1, 2, -1]),
+          Set.new([1, 2, 0])
         ]
       end
     end
@@ -278,12 +287,23 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
         expect(arb.shrink(val)).to be_a(Enumerator)
       end
 
-      it "returns an Enumerator that iterates hash shrinking towards empty" do
+      it "returns an Enumerator that iterates hash with shrunken length or value" do
         arb = Pbt.hash(Pbt.symbol, Pbt.integer)
-        expect(arb.shrink({a: 10, b: 20, c: -1}).to_a).to eq [
-          {b: 20, c: -1},
-          {c: -1},
-          {}
+        expect(arb.shrink({a: 10, b: 20}).to_a).to eq [
+          {a: 10},
+          {b: 20},
+          {},
+          {a: 5, b: 20},
+          {a: 3, b: 20},
+          {a: 2, b: 20},
+          {a: 1, b: 20},
+          {a: 0, b: 20},
+          {a: 10, b: 10},
+          {a: 10, b: 5},
+          {a: 10, b: 3},
+          {a: 10, b: 2},
+          {a: 10, b: 1},
+          {a: 10, b: 0}
         ]
       end
     end
