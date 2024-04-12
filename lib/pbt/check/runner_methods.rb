@@ -43,31 +43,48 @@ module Pbt
           end
         end
 
-        suppress_exception_report_for_ractor(config) do
+        setup_for_ractor(config, property) do
           run_it(property, source_values, config).to_run_details(config)
         end
       end
 
       private
 
-      # If using Ractor, so many exception reports happen in Ractor and a console gets too messy. Suppress them to avoid that.
+      # If using Ractor, some extra configurations are available and they need to be set up.
+      #
+      # - `:thread_report_on_exception`
+      #   So many exception reports happen in Ractor and a console gets too messy. Suppress them to avoid that.
+      # - `:experimental_ractor_rspec_integration`
+      #   Allow to use Ractor with RSpec. This is an experimental feature and it's not stable.
       #
       # @param config [Hash] Configuration parameters.
+      # @param property [Property]
       # @param block [Proc]
-      def suppress_exception_report_for_ractor(config, &block)
+      def setup_for_ractor(config, property, &block)
         if config[:worker] == :ractor
           original_report_on_exception = Thread.report_on_exception
           Thread.report_on_exception = config[:thread_report_on_exception]
+
+          if config[:experimental_ractor_rspec_integration]
+            require "pbt/check/rspec_adapter/integration"
+            class << property
+              include Pbt::Check::RSpecAdapter::PropertyExtension
+            end
+            property.setup_rspec_integration
+          end
         end
 
         yield
       ensure
-        Thread.report_on_exception = original_report_on_exception if config[:worker] == :ractor
+        if config[:worker] == :ractor
+          Thread.report_on_exception = original_report_on_exception
+          property.teardown_rspec_integration if config[:experimental_ractor_rspec_integration]
+        end
       end
 
       # Run the property test for each value.
       #
-      # @param property [Proc] Property to test.
+      # @param property [Property] Property to test.
       # @param source_values [Enumerator] Enumerator of values to test.
       # @param config [Hash] Configuration parameters.
       # @return [RunExecution] Result of the test.
@@ -88,7 +105,7 @@ module Pbt
         runner.run_execution
       end
 
-      # @param property [Proc]
+      # @param property [Property] Property to test.
       # @param runner [RunnerIterator]
       # @return [void]
       def run_it_in_sequential(property, runner)
@@ -105,7 +122,7 @@ module Pbt
         end
       end
 
-      # @param property [Proc]
+      # @param property [Property] Property to test.
       # @param runner [RunnerIterator]
       # @return [void]
       def run_it_in_ractors(property, runner)
@@ -115,13 +132,28 @@ module Pbt
           c.ractor.take
           runner.handle_result(c)
         rescue => e
-          c.exception = e.cause # Ractor error is wrapped in a Ractor::RemoteError. We need to get the cause.
+          handle_ractor_error(e.cause, c)
           runner.handle_result(c)
           break # Ignore the rest of the cases. Just pick up the first failure.
         end
       end
 
-      # @param property [Proc]
+      def handle_ractor_error(cause, c)
+        # Ractor error is wrapped in a Ractor::RemoteError. We need to get the cause.
+        unless defined?(Pbt::Check::RSpecAdapter) && cause.is_a?(Pbt::Check::RSpecAdapter::ExpectationNotMet) # Unknown error.
+          c.exception = cause
+          return
+        end
+
+        # Convert Pbt's custom error to RSpec's error.
+        begin
+          RSpec::Expectations::ExpectationHelper.handle_failure(cause.matcher, cause.custom_message, cause.failure_message_method)
+        rescue RSpec::Expectations::ExpectationNotMetError => e # The class inherits Exception, not StandardError.
+          c.exception = e
+        end
+      end
+
+      # @param property [Property] Property to test.
       # @param runner [RunnerIterator]
       # @return [void]
       def run_it_in_threads(property, runner)
@@ -142,7 +174,7 @@ module Pbt
         end
       end
 
-      # @param property [Proc]
+      # @param property [Property] Property to test.
       # @param runner [RunnerIterator]
       # @return [void]
       def run_it_in_processes(property, runner)

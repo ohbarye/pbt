@@ -64,7 +64,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :ractor,
                 num_runs: 5,
                 seed: anything,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                experimental_ractor_rspec_integration: false
               }
             )
           end
@@ -98,7 +99,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :ractor,
                 num_runs: 10,
                 seed:,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                experimental_ractor_rspec_integration: false
               }
             )
           end
@@ -128,7 +130,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :thread,
                 num_runs: 5,
                 seed: anything,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                experimental_ractor_rspec_integration: false
               }
             )
           end
@@ -162,7 +165,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :thread,
                 num_runs: 10,
                 seed:,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                experimental_ractor_rspec_integration: false
               }
             )
           end
@@ -192,7 +196,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :process,
                 num_runs: 5,
                 seed: anything,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                experimental_ractor_rspec_integration: false
               }
             )
           end
@@ -226,7 +231,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :process,
                 num_runs: 10,
                 seed:,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                experimental_ractor_rspec_integration: false
               }
             )
           end
@@ -256,7 +262,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :none,
                 num_runs: 5,
                 seed: anything,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                experimental_ractor_rspec_integration: false
               }
             )
           end
@@ -290,10 +297,52 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :none,
                 num_runs: 10,
                 seed:,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                experimental_ractor_rspec_integration: false
               }
             )
           end
+        end
+      end
+    end
+
+    describe "experimental_ractor_rspec_integration" do
+      it "allows to use RSpec expectation and matchers" do
+        Pbt.assert num_runs: 5, worker: :ractor, experimental_ractor_rspec_integration: true do
+          Pbt.property(Pbt.integer) do |x|
+            expect(x).to be_a(Integer)
+          end
+        end
+
+        Pbt.assert num_runs: 5, worker: :ractor, experimental_ractor_rspec_integration: true do
+          Pbt.property(Pbt.integer, Pbt.integer) do |x, y|
+            expect(x + y).to be_a(Integer)
+          end
+        end
+
+        Pbt.assert num_runs: 5, worker: :ractor, experimental_ractor_rspec_integration: true do
+          Pbt.property(x: Pbt.integer, y: Pbt.integer) do |x:, y:|
+            expect(x + y).to be_a(Integer)
+          end
+        end
+      end
+
+      it "raises Pbt::PropertyFailure that wraps RSpec's exception when expectation failed" do
+        expect {
+          seed = 135479457171118952930684770951487304295
+          Pbt.assert num_runs: 5, worker: :ractor, seed:, experimental_ractor_rspec_integration: true do
+            Pbt.property(Pbt.integer) do |i|
+              expect(i).to be_a(String)
+            end
+          end
+        }.to raise_error(Pbt::PropertyFailure) do |e|
+          expect(e.message).to include <<~MSG.chomp
+            Property failed after 1 test(s)
+            { seed: 135479457171118952930684770951487304295 }
+            Counterexample: 0
+            Shrunk 21 time(s)
+            Got RSpec::Expectations::ExpectationNotMetError: expected 0 to be a kind of String
+          MSG
         end
       end
     end
