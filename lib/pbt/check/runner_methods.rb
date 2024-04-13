@@ -55,14 +55,14 @@ module Pbt
       # @param config [Hash] Configuration parameters.
       # @param block [Proc]
       def suppress_exception_report_for_ractor(config, &block)
-        if config[:concurrency_method] == :ractor
+        if config[:worker] == :ractor
           original_report_on_exception = Thread.report_on_exception
           Thread.report_on_exception = config[:thread_report_on_exception]
         end
 
         yield
       ensure
-        Thread.report_on_exception = original_report_on_exception if config[:concurrency_method] == :ractor
+        Thread.report_on_exception = original_report_on_exception if config[:worker] == :ractor
       end
 
       # Run the property test for each value.
@@ -74,7 +74,7 @@ module Pbt
       def run_it(property, source_values, config)
         runner = Check::RunnerIterator.new(source_values, property, config[:verbose])
         while runner.has_next?
-          case config[:concurrency_method]
+          case config[:worker]
           in :ractor
             run_it_in_ractors(property, runner)
           in :process
@@ -170,7 +170,7 @@ module Pbt
         require "parallel"
       rescue LoadError
         raise InvalidConfiguration,
-          "Parallel gem (https://github.com/grosser/parallel) is required to use concurrency_method `:process` or `:thread`. Please add `gem 'parallel'` to your Gemfile."
+          "Parallel gem (https://github.com/grosser/parallel) is required to use worker `:process` or `:thread`. Please add `gem 'parallel'` to your Gemfile."
       end
     end
   end

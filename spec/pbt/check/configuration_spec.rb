@@ -6,7 +6,7 @@ RSpec.describe Pbt::Check::Configuration do
       describe "for each runners" do
         it "can be configured for each runner" do
           runs = 0
-          Pbt.assert num_runs: 5, concurrency_method: :none do
+          Pbt.assert num_runs: 5, worker: :none do
             Pbt.property(Pbt.integer) do |_|
               runs += 1 # To count the number of runs, this test disables Ractor
             end
@@ -19,7 +19,7 @@ RSpec.describe Pbt::Check::Configuration do
         around do |ex|
           Pbt.configure do |config|
             config.num_runs = 2
-            config.concurrency_method = :none
+            config.worker = :none
           end
 
           ex.run
@@ -27,7 +27,7 @@ RSpec.describe Pbt::Check::Configuration do
           # rollback the configuration
           Pbt.configure do |config|
             config.num_runs = 100
-            config.concurrency_method = :ractor
+            config.worker = :ractor
           end
         end
 
@@ -40,11 +40,11 @@ RSpec.describe Pbt::Check::Configuration do
       end
     end
 
-    describe "concurrency_method" do
+    describe "worker" do
       describe ":ractor" do
         context "when all cases pass" do
           it "reports success" do
-            run_details = Pbt.check num_runs: 5, concurrency_method: :ractor do
+            run_details = Pbt.check num_runs: 5, worker: :ractor do
               Pbt.property(Pbt.integer) {}
             end
 
@@ -61,7 +61,7 @@ RSpec.describe Pbt::Check::Configuration do
               verbose: false,
               run_configuration: {
                 verbose: false,
-                concurrency_method: :ractor,
+                worker: :ractor,
                 num_runs: 5,
                 seed: anything,
                 thread_report_on_exception: false
@@ -76,7 +76,7 @@ RSpec.describe Pbt::Check::Configuration do
 
             # This seed generates [5, 1, 4] and the 4 fails.
             # Then it shrinks from 4 towards with [3, 2, 1] and finds 2 as the smallest counterexample.
-            run_details = Pbt.check num_runs: 10, concurrency_method: :ractor, seed: do
+            run_details = Pbt.check num_runs: 10, worker: :ractor, seed: do
               Pbt.property(Pbt.one_of(1, 2, 3, 4, 5)) do |n|
                 raise "dummy error" if n % 2 == 0
               end
@@ -95,7 +95,7 @@ RSpec.describe Pbt::Check::Configuration do
               verbose: false,
               run_configuration: {
                 verbose: false,
-                concurrency_method: :ractor,
+                worker: :ractor,
                 num_runs: 10,
                 seed:,
                 thread_report_on_exception: false
@@ -108,7 +108,7 @@ RSpec.describe Pbt::Check::Configuration do
       describe ":thread" do
         context "when all cases pass" do
           it "reports success" do
-            run_details = Pbt.check num_runs: 5, concurrency_method: :thread do
+            run_details = Pbt.check num_runs: 5, worker: :thread do
               Pbt.property(Pbt.integer) {}
             end
 
@@ -125,7 +125,7 @@ RSpec.describe Pbt::Check::Configuration do
               verbose: false,
               run_configuration: {
                 verbose: false,
-                concurrency_method: :thread,
+                worker: :thread,
                 num_runs: 5,
                 seed: anything,
                 thread_report_on_exception: false
@@ -140,7 +140,7 @@ RSpec.describe Pbt::Check::Configuration do
 
             # This seed generates [5, 1, 4] and the 4 fails.
             # Then it shrinks from 4 towards with [3, 2, 1] and finds 2 as the smallest counterexample.
-            run_details = Pbt.check num_runs: 10, concurrency_method: :thread, seed: do
+            run_details = Pbt.check num_runs: 10, worker: :thread, seed: do
               Pbt.property(Pbt.one_of(1, 2, 3, 4, 5)) do |n|
                 raise "dummy error" if n % 2 == 0
               end
@@ -159,7 +159,7 @@ RSpec.describe Pbt::Check::Configuration do
               verbose: false,
               run_configuration: {
                 verbose: false,
-                concurrency_method: :thread,
+                worker: :thread,
                 num_runs: 10,
                 seed:,
                 thread_report_on_exception: false
@@ -172,7 +172,7 @@ RSpec.describe Pbt::Check::Configuration do
       describe ":process" do
         context "when all cases pass" do
           it "reports success" do
-            run_details = Pbt.check num_runs: 5, concurrency_method: :process do
+            run_details = Pbt.check num_runs: 5, worker: :process do
               Pbt.property(Pbt.integer) {}
             end
 
@@ -189,7 +189,7 @@ RSpec.describe Pbt::Check::Configuration do
               verbose: false,
               run_configuration: {
                 verbose: false,
-                concurrency_method: :process,
+                worker: :process,
                 num_runs: 5,
                 seed: anything,
                 thread_report_on_exception: false
@@ -204,7 +204,7 @@ RSpec.describe Pbt::Check::Configuration do
 
             # This seed generates [5, 1, 4] and the 4 fails.
             # Then it shrinks from 4 towards with [3, 2, 1] and finds 2 as the smallest counterexample.
-            run_details = Pbt.check num_runs: 10, concurrency_method: :process, seed: do
+            run_details = Pbt.check num_runs: 10, worker: :process, seed: do
               Pbt.property(Pbt.one_of(1, 2, 3, 4, 5)) do |n|
                 raise "dummy error" if n % 2 == 0
               end
@@ -223,7 +223,7 @@ RSpec.describe Pbt::Check::Configuration do
               verbose: false,
               run_configuration: {
                 verbose: false,
-                concurrency_method: :process,
+                worker: :process,
                 num_runs: 10,
                 seed:,
                 thread_report_on_exception: false
@@ -236,7 +236,7 @@ RSpec.describe Pbt::Check::Configuration do
       describe ":none" do
         context "when all cases pass" do
           it "reports success" do
-            run_details = Pbt.check num_runs: 5, concurrency_method: :none do
+            run_details = Pbt.check num_runs: 5, worker: :none do
               Pbt.property(Pbt.integer) {}
             end
 
@@ -253,7 +253,7 @@ RSpec.describe Pbt::Check::Configuration do
               verbose: false,
               run_configuration: {
                 verbose: false,
-                concurrency_method: :none,
+                worker: :none,
                 num_runs: 5,
                 seed: anything,
                 thread_report_on_exception: false
@@ -268,7 +268,7 @@ RSpec.describe Pbt::Check::Configuration do
 
             # This seed generates [5, 1, 4] and the 4 fails.
             # Then it shrinks from 4 towards with [3, 2, 1] and finds 2 as the smallest counterexample.
-            run_details = Pbt.check num_runs: 10, concurrency_method: :none, seed: do
+            run_details = Pbt.check num_runs: 10, worker: :none, seed: do
               Pbt.property(Pbt.one_of(1, 2, 3, 4, 5)) do |n|
                 raise "dummy error" if n % 2 == 0
               end
@@ -287,7 +287,7 @@ RSpec.describe Pbt::Check::Configuration do
               verbose: false,
               run_configuration: {
                 verbose: false,
-                concurrency_method: :none,
+                worker: :none,
                 num_runs: 10,
                 seed:,
                 thread_report_on_exception: false
