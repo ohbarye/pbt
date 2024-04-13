@@ -2,23 +2,24 @@
 
 module Pbt
   module Arbitrary
+    # Generates random integers between `min` and `max`.
     class IntegerArbitrary < Arbitrary
       DEFAULT_TARGET = 0
-      DEFAULT_SIZE = 1000000
+      private_constant :DEFAULT_TARGET
 
-      # @param min [Integer]
-      # @param max [Integer]
-      def initialize(min = nil, max = nil)
-        @max = max || DEFAULT_SIZE
-        @min = min || -DEFAULT_SIZE
+      # @param min [Integer] Minimum value to generate.
+      # @param max [Integer] Maximum value to generate.
+      def initialize(min, max)
+        @min = min
+        @max = max
       end
 
-      # @return [Integer]
+      # @see Arbitrary#generate
       def generate(rng)
         rng.rand(@min..@max)
       end
 
-      # @return [Enumerator]
+      # @see Arbitrary#shrink
       def shrink(current, target: DEFAULT_TARGET)
         gap = current - target
         return Enumerator.new { |_| } if gap == 0

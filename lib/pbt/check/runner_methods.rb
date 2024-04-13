@@ -7,22 +7,30 @@ require "pbt/reporter/run_details_reporter"
 
 module Pbt
   module Check
+    # Module to be
     module RunnerMethods
       include Check::Tosser
 
-      # `assert` runs a property based test and reports its result.
-      # @param options [Hash]
-      # @param property [Proc]
+      # Run a property based test and report its result.
+      #
+      # @see Check::Configuration
+      # @param options [Hash] Optional parameters to customize the execution.
+      # @param property [Proc] Proc that returns Property instance.
       # @return [void]
+      # @raise [PropertyFailure]
       def assert(**options, &property)
         out = check(**options, &property)
         Reporter::RunDetailsReporter.new(out).report_run_details
       end
 
-      # `check` runs a property based test and return its result.
+      # Run a property based test and return its result.
+      # This doesn't throw contrary to `assert`.
       # Use `assert` unless you want to handle the result.
-      # @param options [Hash]
-      # @param property [Proc]
+      #
+      # @see RunnerMethods#assert
+      # @see Check::Configuration
+      # @param options [Hash] Optional parameters to customize the execution.
+      # @param property [Proc] Proc that returns Property instance.
       # @return [RunDetails]
       def check(**options, &property)
         property = property.call
@@ -43,7 +51,9 @@ module Pbt
       private
 
       # If using Ractor, so many exception reports happen in Ractor and a console gets too messy. Suppress them to avoid that.
-      # @param config [Hash]
+      #
+      # @param config [Hash] Configuration parameters.
+      # @param block [Proc]
       def suppress_exception_report_for_ractor(config, &block)
         if config[:concurrency_method] == :ractor
           original_report_on_exception = Thread.report_on_exception
@@ -55,14 +65,16 @@ module Pbt
         Thread.report_on_exception = original_report_on_exception if config[:concurrency_method] == :ractor
       end
 
-      # @param property [Proc]
-      # @param source_values [Enumerator]
-      # @param options [Hash]
-      # @return [RunExecution]
-      def run_it(property, source_values, options)
-        runner = Check::RunnerIterator.new(source_values, property, options[:verbose])
+      # Run the property test for each value.
+      #
+      # @param property [Proc] Property to test.
+      # @param source_values [Enumerator] Enumerator of values to test.
+      # @param config [Hash] Configuration parameters.
+      # @return [RunExecution] Result of the test.
+      def run_it(property, source_values, config)
+        runner = Check::RunnerIterator.new(source_values, property, config[:verbose])
         while runner.has_next?
-          case options[:concurrency_method]
+          case config[:concurrency_method]
           in :ractor
             run_it_in_ractors(property, runner)
           in :process
@@ -151,11 +163,14 @@ module Pbt
         end
       end
 
+      # Load Parallel gem. If it's not installed, raise an error.
+      # @see https://github.com/grosser/parallel
+      # @raise [InvalidConfiguration]
       def require_parallel
         require "parallel"
-      rescue
+      rescue LoadError
         raise InvalidConfiguration,
-          "Parallel gem is required to use concurrency_method `:process` or `:thread`. Please add `gem 'parallel'` to your Gemfile."
+          "Parallel gem (https://github.com/grosser/parallel) is required to use concurrency_method `:process` or `:thread`. Please add `gem 'parallel'` to your Gemfile."
       end
     end
   end

@@ -2,12 +2,16 @@
 
 module Pbt
   module Reporter
+    # Reporter for the run details of a property test.
     class RunDetailsReporter
-      # @param [Pbt::Reporter::RunExecution] run_details
+      # @param run_details [Pbt::Reporter::RunExecution]
       def initialize(run_details)
         @run_details = run_details
       end
 
+      # Report the run details of a property test.
+      # If the property test failed, raise a PropertyFailure.
+      #
       # @raise [PropertyFailure]
       def report_run_details
         if @run_details.failed
