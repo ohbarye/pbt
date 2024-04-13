@@ -148,7 +148,7 @@ Pbt.configure do |config|
   # Whether to print verbose output. Default is `false`.
   config.verbose = 100
 
-  # The concurrency method to use. :ractor`, `:thread`, `:process` and `:none` are supported. Default is `:ractor`.
+  # The concurrency method to use. `:ractor`, `:thread`, `:process` and `:none` are supported. Default is `:ractor`.
   config.worker = :ractor
 
   # The number of runs to perform. Default is `100`.
