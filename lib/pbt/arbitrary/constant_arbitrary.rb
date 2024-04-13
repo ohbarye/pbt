@@ -2,18 +2,19 @@
 
 module Pbt
   module Arbitrary
+    # Generates a constant value.
     class ConstantArbitrary < Arbitrary
-      # @param val [Object
+      # @param val [Object]
       def initialize(val)
         @val = val
       end
 
-      # @return [Object]
+      # @see Arbitrary#generate
       def generate(rng)
         @val
       end
 
-      # @return [Enumerator]
+      # @see Arbitrary#shrink
       def shrink(current)
         Enumerator.new {}
       end

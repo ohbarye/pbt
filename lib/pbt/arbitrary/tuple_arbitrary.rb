@@ -2,20 +2,21 @@
 
 module Pbt
   module Arbitrary
+    # Generates a tuple of arbitrary values.
     class TupleArbitrary < Arbitrary
-      # @param arbs [Array<Pbt::Arbitrary>]
+      # @param arbs [Array<Arbitrary>] Arbitraries used to generate the values of the tuple.
       def initialize(*arbs)
         @arbs = arbs
       end
 
-      # @return [Array]
+      # @see Arbitrary#generate
       def generate(rng)
         @arbs.map { |arb| arb.generate(rng) }
       end
 
-      # @return [Enumerator]
+      # @see Arbitrary#shrink
       def shrink(current)
-        # This is not the most comprehensive but allows a reasonable number of entries in the shrink
+        # This is not the most comprehensive but allows a reasonable number of entries in the shrink.
         Enumerator.new do |y|
           @arbs.each_with_index do |arb, idx|
             arb.shrink(current[idx]).each do |v|

@@ -2,6 +2,7 @@
 
 module Pbt
   module Reporter
+    # Details of a single run of a property test.
     RunDetails = Struct.new(
       :failed,
       :num_runs,

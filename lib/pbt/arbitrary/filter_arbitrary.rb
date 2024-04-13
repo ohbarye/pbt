@@ -2,16 +2,16 @@
 
 module Pbt
   module Arbitrary
+    # Generates values from another arbitrary, but only if they pass a predicate.
     class FilterArbitrary < Arbitrary
-      # @param arb [ArrayArbitrary]
-      # @param refinement [Proc] a function to filter the generated value and shrunken values.
-      #
+      # @param arb [Arbitrary] Arbitrary to generate values to be filtered.
+      # @param refinement [Proc] Predicate proc to test each produced element. Return true to keep the element, false otherwise.
       def initialize(arb, &refinement)
         @arb = arb
         @refinement = refinement
       end
 
-      # @return [Array]
+      # @see Arbitrary#generate
       def generate(rng)
         loop do
           val = @arb.generate(rng)
@@ -19,7 +19,7 @@ module Pbt
         end
       end
 
-      # @return [Enumerator]
+      # @see Arbitrary#shrink
       def shrink(current)
         Enumerator.new do |y|
           @arb.shrink(current).each do |v|
