@@ -4,7 +4,7 @@
 [![Build Status](https://github.com/ohbarye/pbt/actions/workflows/main.yml/badge.svg)](https://github.com/ohbarye/pbt/actions/workflows/main.yml)
 [![RubyDoc](https://img.shields.io/badge/%F0%9F%93%9ARubyDoc-documentation-informational.svg)](https://www.rubydoc.info/gems/pbt)
 
-An experimental property-based testing tool for Ruby that allows you to run test cases in parallel.
+A property-based testing tool for Ruby with experimental features that allow you to run test cases in parallel.
 
 PBT stands for Property-Based Testing.
 
@@ -148,8 +148,8 @@ Pbt.configure do |config|
   # Whether to print verbose output. Default is `false`.
   config.verbose = 100
 
-  # The concurrency method to use. `:ractor`, `:thread`, `:process` and `:none` are supported. Default is `:ractor`.
-  config.worker = :ractor
+  # The concurrency method to use. `:ractor`, `:thread`, `:process` and `:none` are supported. Default is `:none`.
+  config.worker = :none
 
   # The number of runs to perform. Default is `100`.
   config.num_runs = 100
