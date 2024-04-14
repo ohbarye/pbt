@@ -75,17 +75,34 @@ module Pbt
         runner = Check::RunnerIterator.new(source_values, property, config[:verbose])
         while runner.has_next?
           case config[:worker]
+          in :none
+            run_it_in_sequential(property, runner)
           in :ractor
             run_it_in_ractors(property, runner)
           in :process
             run_it_in_processes(property, runner)
           in :thread
             run_it_in_threads(property, runner)
-          in :none
-            run_it_in_sequential(property, runner)
           end
         end
         runner.run_execution
+      end
+
+      # @param property [Proc]
+      # @param runner [RunnerIterator]
+      # @return [void]
+      def run_it_in_sequential(property, runner)
+        runner.each_with_index do |val, index|
+          c = Case.new(val:, index:)
+          begin
+            property.run(val)
+            runner.handle_result(c)
+          rescue => e
+            c.exception = e
+            runner.handle_result(c)
+            break # Ignore the rest of the cases. Just pick up the first failure.
+          end
+        end
       end
 
       # @param property [Proc]
@@ -143,23 +160,6 @@ module Pbt
           runner.handle_result(c)
           break if c.exception
           # Ignore the rest of the cases. Just pick up the first failure.
-        end
-      end
-
-      # @param property [Proc]
-      # @param runner [RunnerIterator]
-      # @return [void]
-      def run_it_in_sequential(property, runner)
-        runner.each_with_index do |val, index|
-          c = Case.new(val:, index:)
-          begin
-            property.run(val)
-            runner.handle_result(c)
-          rescue => e
-            c.exception = e
-            runner.handle_result(c)
-            break # Ignore the rest of the cases. Just pick up the first failure.
-          end
         end
       end
 
