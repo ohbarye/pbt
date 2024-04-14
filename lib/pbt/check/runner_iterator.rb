@@ -51,7 +51,7 @@ module Pbt
           @next_values = @property.shrink(c.val)
         else
           # successful run
-          @run_execution.record_success
+          @run_execution.record_success(c)
         end
       end
     end

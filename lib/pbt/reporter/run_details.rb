@@ -14,6 +14,7 @@ module Pbt
       :error_instance,
       :failures,
       :verbose,
+      :execution_summary,
       :run_configuration,
       keyword_init: true
     )
