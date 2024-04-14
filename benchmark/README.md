@@ -20,6 +20,10 @@ Interestingly, both multi-process (`worker: :process`) and multi-thread (`worker
 
 The following benchmarks are the results of running the benchmark suite.
 
+- macOS 13.3.1, Apple M1 Pro 10 cores (8 performance and 2 efficiency)
+- ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin22]
+- pbt commit hash 6582b27105ef5e92197b3f52f9c7cf78d731e1e2
+
 ---
 
 ### Benchmark success:simple
