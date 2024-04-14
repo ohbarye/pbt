@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.1.1] - 2024-04-14
+
+- Change default worker from `:ractor` to `:none`
+
 ## [0.1.0] - 2024-04-13
 
 - Implement basic primitive arbitraries
