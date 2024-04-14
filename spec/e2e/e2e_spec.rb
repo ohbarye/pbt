@@ -75,12 +75,16 @@ RSpec.describe Pbt do
               end
             end
           }.to raise_error(Pbt::PropertyFailure) do |e|
-            expect(e.message).to eq <<~MSG
+            expect(e.message).to include <<~MSG.chomp
               Property failed after 1 test(s)
               { seed: 6478147390881634219670054323585906496 }
               Counterexample: 0
               Shrunk 0 time(s)
               Got ZeroDivisionError: divided by 0
+            MSG
+            expect(e.message).to include <<~MSG.chomp
+              Hint: Set `verbose: true` in order to check the list of all failing values encountered during the run.
+              Hint: Set `seed: 6478147390881634219670054323585906496` in order to reproduce the failed test case with the same values.
             MSG
           end
         end
@@ -99,12 +103,16 @@ RSpec.describe Pbt do
                 end
               end
             }.to raise_error(Pbt::PropertyFailure) do |e|
-              expect(e.message).to eq <<~MSG
+              expect(e.message).to include <<~MSG.chomp
                 Property failed after 1 test(s)
                 { seed: 152305683944880796308915131809827264455 }
                 Counterexample: [2, 11]
                 Shrunk 16 time(s)
                 Got RuntimeError: strings should be sorted as numbers ["11", "2"]
+              MSG
+              expect(e.message).to include <<~MSG.chomp
+                Hint: Set `verbose: true` in order to check the list of all failing values encountered during the run.
+                Hint: Set `seed: 152305683944880796308915131809827264455` in order to reproduce the failed test case with the same values.
               MSG
             end
           end
