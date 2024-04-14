@@ -180,6 +180,8 @@ For concurrent processing, you can specify any of the three workers—`:ractor`,
 
 `Pbt` supports 3 concurrency methods and 1 sequential one. You can choose one of them by setting the `worker` option.
 
+Be aware that the performance of each method depends on the test subject. For example, if the test subject is CPU-bound, `:ractor` may be the best choice. Otherwise, `:none` shall be the best choice for most cases. See [benchmarks](benchmark/README.md).
+
 ### Ractor
 
 ```ruby
@@ -266,10 +268,10 @@ Once this project finishes the following, we will release v1.0.0.
   - [x] Add better examples
   - [x] Arbitrary usage
   - [x] Configuration
+- [x] Benchmark
 - [ ] Rich report like verbose mode
 - [ ] Allow to use expectations and matchers provided by test framework in Ractor if possible.
   - It'd be so hard to pass assertions like `expect`, `assert` to a Ractor.
-- [ ] Benchmark
 - [ ] More parallelism or faster execution if possible
 
 ## Development
