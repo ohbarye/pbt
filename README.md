@@ -342,7 +342,7 @@ Once this project finishes the following, we will release v1.0.0.
   - [x] Arbitrary usage
   - [x] Configuration
 - [x] Benchmark
-- [ ] Rich report like verbose mode
+- [x] Rich report by verbose mode
 - [ ] Allow to use expectations and matchers provided by test framework in Ractor if possible.
   - It'd be so hard to pass assertions like `expect`, `assert` to a Ractor.
 - [ ] More parallelism or faster execution if possible
