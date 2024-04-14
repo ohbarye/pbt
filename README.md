@@ -107,7 +107,7 @@ There are many built-in arbitraries in `Pbt`. You can use them to generate rando
 #### Primitives
 
 ```ruby
-rng = Random.new(
+rng = Random.new
 
 Pbt.integer.generate(rng) # => 42
 Pbt.integer(min: -1, max: 8).generate(rng) # => Integer between -1 and 8
@@ -138,6 +138,71 @@ Pbt.one_of(:a, 1, 0.1).generate(rng) # => :a or 1 or 0.1
 ````
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.
+
+## What if property-based tests fail?
+
+Once a test fails it's time to debug. `Pbt` provides some features to help you debug.
+
+### How to reproduce
+
+When a test fails, you'll see a message like below.
+
+```text
+Pbt::PropertyFailure:
+  Property failed after 23 test(s)
+  { seed: 11001296583699917659214176011685741769 }
+  Counterexample: 0
+  Shrunk 3 time(s)
+  Got ZeroDivisionError: divided by 0
+  # and backtraces
+```
+
+You can reproduce the failure by passing the seed to `Pbt.assert`.
+
+```ruby
+Pbt.assert(seed: 11001296583699917659214176011685741769) do
+  Pbt.property(Pbt.integer) do |number|
+    # your test
+  end
+end
+```
+
+### Verbose mode
+
+You may want to know which values pass and which values fail. You can enable verbose mode by passing `verbose: true` to `Pbt.assert`.
+
+```ruby
+Pbt.assert(verbose: true) do
+  Pbt.property(Pbt.array(Pbt.integer)) do |numbers|
+    # your failed test
+  end
+end
+```
+
+The verbose mode prints the results of each tested values.
+
+```text
+Encountered failures were:
+- [152477, 666997, -531468, -92182, 623948, 425913, 656138, 856463, -64529]
+- [76239, 666997, -531468, -92182, 623948]
+- [76239, 666997, -531468]
+(snipped for README)
+- [2, 163]
+- [2, 11]
+
+Execution summary:
+. × [152477, 666997, -531468, -92182, 623948, 425913, 656138, 856463, -64529]
+. . √ [152477, 666997, -531468, -92182, 623948]
+. . √ [-64529]
+. . × [76239, 666997, -531468, -92182, 623948, 425913, 656138, 856463, -64529]
+. . . × [76239, 666997, -531468, -92182, 623948]
+(snipped for README)
+. . . . . . . . . . . . . . . . . √ [2, 21]
+. . . . . . . . . . . . . . . . . × [2, 11]
+. . . . . . . . . . . . . . . . . . √ []
+. . . . . . . . . . . . . . . . . . √ [2, 1]
+. . . . . . . . . . . . . . . . . . √ [2, 0]
+```
 
 ## Configuration
 

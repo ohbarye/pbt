@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Add verbose mode. It's useful to debug the test case.
+ 
 ## [0.1.1] - 2024-04-14
 
 - Change default worker from `:ractor` to `:none`
