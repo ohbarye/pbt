@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.2.0] - 2024-04-17
+
 - Add verbose mode. It's useful to debug the test case.
  
 ## [0.1.1] - 2024-04-14
