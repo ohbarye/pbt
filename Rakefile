@@ -42,6 +42,16 @@ namespace :benchmark do
       sh "ruby", "benchmark/success_io_bound.rb"
       puts
     end
+
+    task :io_bound_socket do
+      puts "### Benchmark success:io_bound_socket"
+      puts
+      puts "This runs a script that does IO bound work."
+      puts
+      ENV["RUBYOPT"] = "-W:no-experimental"
+      sh "ruby", "benchmark/success_io_bound_socket.rb"
+      puts
+    end
   end
 
   namespace :failure do

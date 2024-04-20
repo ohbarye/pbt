@@ -13,7 +13,7 @@ Benchmark.ips do |x|
   x.report("ractor") do
     Pbt.assert(worker: :ractor, seed:) do
       Pbt.property(Pbt.ascii_string) do |str|
-        read_file(str)
+        File.read(File.join(__dir__, "example.txt")) + str
       end
     end
   end
@@ -21,7 +21,7 @@ Benchmark.ips do |x|
   x.report("process") do
     Pbt.assert(worker: :process, seed:) do
       Pbt.property(Pbt.ascii_string) do |str|
-        read_file(str)
+        File.read(File.join(__dir__, "example.txt")) + str
       end
     end
   end
@@ -29,7 +29,7 @@ Benchmark.ips do |x|
   x.report("thread") do
     Pbt.assert(worker: :thread, seed:) do
       Pbt.property(Pbt.ascii_string) do |str|
-        read_file(str)
+        File.read(File.join(__dir__, "example.txt")) + str
       end
     end
   end
@@ -37,7 +37,7 @@ Benchmark.ips do |x|
   x.report("none") do
     Pbt.assert(worker: :none, seed:) do
       Pbt.property(Pbt.ascii_string) do |str|
-        read_file(str)
+        File.read(File.join(__dir__, "example.txt")) + str
       end
     end
   end
