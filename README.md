@@ -226,6 +226,9 @@ Pbt.configure do |config|
   # Whether to report exceptions in threads.
   # It's useful to suppress error logs on Ractor that reports many errors. Default is `false`.
   config.thread_report_on_exception = false
+
+  # Whether to allow RSpec expectation and matchers in Ractor. It's quite experimental! Default is `false`.
+  config.experimental_ractor_rspec_integration = false
 end
 ```
 
@@ -289,6 +292,20 @@ it do
 end
 ```
 
+If you're a challenger, you can enable the experimental feature to allow using RSpec expectations and matchers in Ractor. It works but it's quite experimental and could cause unexpected behaviors.
+
+```shell
+it do
+  Pbt.assert(worker: :ractor, experimental_ractor_rspec_integration: true) do
+    Pbt.property(Pbt.integer) do |n|
+      # Some RSpec expectations and matchers are available in Ractor by hack.
+      # Other features like `let`, `subject`, `before`, `after` that access out of block are still not available.
+      expect(n).to be_an(Integer)
+    end
+  end
+end
+```
+
 ### Process
 
 If you'd like to run test cases that are CPU-bound and `:ractor` is not available, `:process` becomes a good choice.
@@ -343,9 +360,11 @@ Once this project finishes the following, we will release v1.0.0.
   - [x] Configuration
 - [x] Benchmark
 - [x] Rich report by verbose mode
-- [ ] Allow to use expectations and matchers provided by test framework in Ractor if possible.
+- [x] (Partially) Allow to use expectations and matchers provided by test framework in Ractor if possible.
   - It'd be so hard to pass assertions like `expect`, `assert` to a Ractor.
-- [ ] More parallelism or faster execution if possible
+- [ ] Implement frequency arbitrary
+- [ ] Statistics feature to aggregate generated values
+- [ ] Decide DSL
 
 ## Development
 
