@@ -34,7 +34,11 @@ module Pbt
       # @param val [Object]
       # @return [void]
       def run(val)
-        @predicate.call(val)
+        if val.is_a?(Hash)
+          @predicate.call(**val)
+        else
+          @predicate.call(val)
+        end
       end
 
       # Run the predicate with the generated `val` in a Ractor.
