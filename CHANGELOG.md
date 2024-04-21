@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+- Add experimental_ractor_rspec_integration mode. Be careful, it's quite experimental.
+- Fix a bug: consider a case when a backtrace is nil.
+- Allow to pass a predicate block keyword arguments with destruction.
+
 ## [0.2.0] - 2024-04-17
 
 - Add verbose mode. It's useful to debug the test case.

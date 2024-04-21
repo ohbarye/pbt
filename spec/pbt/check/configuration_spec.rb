@@ -304,6 +304,168 @@ RSpec.describe Pbt::Check::Configuration do
           end
         end
       end
+
+      describe "arguments to be passed" do
+        describe "ractor" do
+          it "allows to use RSpec expectation and matchers" do
+            Pbt.assert(worker: :ractor) do
+              Pbt.property(Pbt.integer) do |x|
+                raise unless x.is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :ractor) do
+              Pbt.property(Pbt.integer, Pbt.integer) do |x, y|
+                raise unless x.is_a?(Integer)
+                raise unless y.is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :ractor) do
+              Pbt.property(Pbt.array(Pbt.integer, empty: false)) do |arr|
+                raise unless arr.is_a?(Array)
+                raise unless arr[0].is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :ractor) do
+              Pbt.property(x: Pbt.integer, y: Pbt.char) do |h|
+                raise unless h.is_a?(Hash)
+                raise unless h[:x].is_a?(Integer)
+                raise unless h[:y].is_a?(String)
+              end
+            end
+
+            # In Ractor worker mode, it's not possible to use keyword arguments.
+            # Because the code calls `Ractor.new(val, ->(x:,y:){})`, to pass the `val` as keyword arguments,
+            # it should be `Ractor.new(**val, &->(x:,y:){})`. But the `val` is interpreted as Ractor's arguments.
+            #
+            # Pbt.assert(worker: :ractor) do
+            #   Pbt.property(x: Pbt.integer, y: Pbt.char) do |x:, y:|
+            #     raise unless x.is_a?(Integer)
+            #     raise unless y.is_a?(String)
+            #   end
+            # end
+          end
+        end
+
+        describe "process" do
+          it "allows to use RSpec expectation and matchers" do
+            Pbt.assert(worker: :process) do
+              Pbt.property(Pbt.integer) do |x|
+                raise unless x.is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :process) do
+              Pbt.property(Pbt.integer, Pbt.integer) do |x, y|
+                raise unless x.is_a?(Integer)
+                raise unless y.is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :process) do
+              Pbt.property(Pbt.array(Pbt.integer, empty: false)) do |arr|
+                raise unless arr.is_a?(Array)
+                raise unless arr[0].is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :process) do
+              Pbt.property(x: Pbt.integer, y: Pbt.char) do |h|
+                raise unless h.is_a?(Hash)
+                raise unless h[:x].is_a?(Integer)
+                raise unless h[:y].is_a?(String)
+              end
+            end
+
+            Pbt.assert(worker: :process) do
+              Pbt.property(x: Pbt.integer, y: Pbt.char) do |x:, y:|
+                raise unless x.is_a?(Integer)
+                raise unless y.is_a?(String)
+              end
+            end
+          end
+        end
+
+        describe "thread" do
+          it "allows to use RSpec expectation and matchers" do
+            Pbt.assert(worker: :thread) do
+              Pbt.property(Pbt.integer) do |x|
+                raise unless x.is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :thread) do
+              Pbt.property(Pbt.integer, Pbt.integer) do |x, y|
+                raise unless x.is_a?(Integer)
+                raise unless y.is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :thread) do
+              Pbt.property(Pbt.array(Pbt.integer, empty: false)) do |arr|
+                raise unless arr.is_a?(Array)
+                raise unless arr[0].is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :thread) do
+              Pbt.property(x: Pbt.integer, y: Pbt.char) do |h|
+                raise unless h.is_a?(Hash)
+                raise unless h[:x].is_a?(Integer)
+                raise unless h[:y].is_a?(String)
+              end
+            end
+
+            Pbt.assert(worker: :thread) do
+              Pbt.property(x: Pbt.integer, y: Pbt.char) do |x:, y:|
+                raise unless x.is_a?(Integer)
+                raise unless y.is_a?(String)
+              end
+            end
+          end
+        end
+
+        describe "none" do
+          it "allows to use RSpec expectation and matchers" do
+            Pbt.assert(worker: :none) do
+              Pbt.property(Pbt.integer) do |x|
+                raise unless x.is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :none) do
+              Pbt.property(Pbt.integer, Pbt.integer) do |x, y|
+                raise unless x.is_a?(Integer)
+                raise unless y.is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :none) do
+              Pbt.property(Pbt.array(Pbt.integer, empty: false)) do |arr|
+                raise unless arr.is_a?(Array)
+                raise unless arr[0].is_a?(Integer)
+              end
+            end
+
+            Pbt.assert(worker: :none) do
+              Pbt.property(x: Pbt.integer, y: Pbt.char) do |h|
+                raise unless h.is_a?(Hash)
+                raise unless h[:x].is_a?(Integer)
+                raise unless h[:y].is_a?(String)
+              end
+            end
+
+            Pbt.assert(worker: :none) do
+              Pbt.property(x: Pbt.integer, y: Pbt.char) do |x:, y:|
+                raise unless x.is_a?(Integer)
+                raise unless y.is_a?(String)
+              end
+            end
+          end
+        end
+      end
     end
 
     describe "experimental_ractor_rspec_integration" do

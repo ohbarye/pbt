@@ -294,7 +294,7 @@ end
 
 If you're a challenger, you can enable the experimental feature to allow using RSpec expectations and matchers in Ractor. It works but it's quite experimental and could cause unexpected behaviors.
 
-```shell
+```ruby
 it do
   Pbt.assert(worker: :ractor, experimental_ractor_rspec_integration: true) do
     Pbt.property(Pbt.integer) do |n|
