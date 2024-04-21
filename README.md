@@ -32,12 +32,6 @@ Add this line to your application's Gemfile and run `bundle install`.
 gem 'pbt'
 ```
 
-If you want to use multi-processes or multi-threads (other than Ractor) as workers to run tests, install the [parallel](https://github.com/grosser/parallel) gem.
-
-```ruby
-gem 'parallel'
-```
-
 Off course you can install with `gem intstall pbt`.
 
 ## Basic Usage
@@ -294,6 +288,8 @@ end
 
 If you're a challenger, you can enable the experimental feature to allow using RSpec expectations and matchers in Ractor. It works but it's quite experimental and could cause unexpected behaviors.
 
+Please note that this feature depends on [prism](https://ruby.github.io/prism/) gem. If you use Ruby 3.2 or prior, you need to install the gem by yourself.
+
 ```ruby
 it do
   Pbt.assert(worker: :ractor, experimental_ractor_rspec_integration: true) do
@@ -318,6 +314,8 @@ Pbt.assert(worker: :process) do
 end
 ```
 
+If you want to use `:process`, you need to install the [parallel](https://github.com/grosser/parallel) gem.
+
 ### Thread
 
 You may not need to run test cases with multi-threads.
@@ -329,6 +327,8 @@ Pbt.assert(worker: :thread) do
   end
 end
 ```
+
+If you want to use `:thread`, you need to install the [parallel](https://github.com/grosser/parallel) gem.
 
 ### None
 
