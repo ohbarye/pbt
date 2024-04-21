@@ -42,6 +42,8 @@ module Pbt
       end
 
       def error_backtrace
+        return "" if @run_details.error_instance.backtrace_locations.nil? # It can be nil.
+
         i = @run_details.verbose ? -1 : 10
         "    #{@run_details.error_instance.backtrace_locations[..i].join("\n    ")}"
       end

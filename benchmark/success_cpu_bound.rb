@@ -16,9 +16,6 @@ end
 
 a, b, c = [9, 4, 0]
 
-puts "Call tarai function with(#{a}, #{b}, #{c})"
-puts
-
 Benchmark.ips do |x|
   x.report("ractor") do
     Pbt.assert(worker: :ractor) do

@@ -19,7 +19,10 @@ namespace :benchmark do
       puts "This runs a script that does not do any IO or CPU bound work."
       puts
       ENV["RUBYOPT"] = "-W:no-experimental"
+      ENV["RUBY_MN_THREADS"] = "1"
+      puts "```"
       sh "ruby", "benchmark/success_simple.rb"
+      puts "```"
       puts
     end
 
@@ -29,7 +32,10 @@ namespace :benchmark do
       puts "This runs a script that does CPU bound work."
       puts
       ENV["RUBYOPT"] = "-W:no-experimental"
+      ENV["RUBY_MN_THREADS"] = "1"
+      puts "```"
       sh "ruby", "benchmark/success_cpu_bound.rb"
+      puts "```"
       puts
     end
 
@@ -39,7 +45,10 @@ namespace :benchmark do
       puts "This runs a script that does IO bound work."
       puts
       ENV["RUBYOPT"] = "-W:no-experimental"
+      ENV["RUBY_MN_THREADS"] = "1"
+      puts "```"
       sh "ruby", "benchmark/success_io_bound.rb"
+      puts "```"
       puts
     end
   end
@@ -51,7 +60,10 @@ namespace :benchmark do
       puts "This runs a script that fails and shrink happens."
       puts
       ENV["RUBYOPT"] = "-W:no-experimental"
+      ENV["RUBY_MN_THREADS"] = "1"
+      puts "```"
       sh "ruby", "benchmark/failure_simple.rb"
+      puts "```"
       puts
     end
   end
