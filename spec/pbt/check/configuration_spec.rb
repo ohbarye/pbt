@@ -483,6 +483,13 @@ RSpec.describe Pbt::Check::Configuration do
         end
 
         Pbt.assert num_runs: 5, worker: :ractor, experimental_ractor_rspec_integration: true do
+          Pbt.property(Pbt.array(Pbt.integer, empty: false)) do |nums|
+            expect(nums).to be_a(Array)
+            expect(nums[0]).to be_a(Integer)
+          end
+        end
+
+        Pbt.assert num_runs: 5, worker: :ractor, experimental_ractor_rspec_integration: true do
           Pbt.property(x: Pbt.integer, y: Pbt.integer) do |x:, y:|
             expect(x + y).to be_a(Integer)
           end
