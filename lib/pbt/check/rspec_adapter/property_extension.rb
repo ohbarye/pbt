@@ -29,12 +29,14 @@ module Pbt
         # @param val [Object]
         # @return [Ractor]
         def run_in_ractor(val)
-          Ractor.new(@class_name, @method_name, val) do |class_name, method_name, val|
+          Ractor.new(@class_name, @method_name, @predicate.parameters.size, val) do |class_name, method_name, param_size, val|
             klass = RSpecAdapter.const_get(class_name)
             if val.is_a?(Hash)
               klass.new.send(method_name, **val)
-            else
+            elsif param_size >= 2
               klass.new.send(method_name, *val)
+            else
+              klass.new.send(method_name, val)
             end
           end
         end
