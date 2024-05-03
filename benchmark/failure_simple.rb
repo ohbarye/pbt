@@ -4,11 +4,13 @@ require "benchmark/ips"
 # With this seed, the 4th case fails and it shrinks happens 13 times.
 seed = 17243810592888013452170775373100387856
 
+def task(x) = (x > 100) ? raise : nil
+
 Benchmark.ips do |x|
   x.report("ractor") do
-    Pbt.assert(worker: :ractor, seed:) do
+    Pbt.assert(worker: :ractor, seed:, num_runs: 100) do
       Pbt.property(Pbt.integer) do |x|
-        raise if x > 100
+        task(x)
       end
     end
   rescue Pbt::PropertyFailure
@@ -16,9 +18,9 @@ Benchmark.ips do |x|
   end
 
   x.report("process") do
-    Pbt.assert(worker: :process, seed:) do
+    Pbt.assert(worker: :process, seed:, num_runs: 100) do
       Pbt.property(Pbt.integer) do |x|
-        raise if x > 100
+        task(x)
       end
     end
   rescue Pbt::PropertyFailure
@@ -26,9 +28,9 @@ Benchmark.ips do |x|
   end
 
   x.report("thread") do
-    Pbt.assert(worker: :thread, seed:) do
+    Pbt.assert(worker: :thread, seed:, num_runs: 100) do
       Pbt.property(Pbt.integer) do |x|
-        raise if x > 100
+        task(x)
       end
     end
   rescue Pbt::PropertyFailure
@@ -36,9 +38,9 @@ Benchmark.ips do |x|
   end
 
   x.report("none") do
-    Pbt.assert(worker: :none, seed:) do
+    Pbt.assert(worker: :none, seed:, num_runs: 100) do
       Pbt.property(Pbt.integer) do |x|
-        raise if x > 100
+        task(x)
       end
     end
   rescue Pbt::PropertyFailure

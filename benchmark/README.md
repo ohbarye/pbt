@@ -21,8 +21,8 @@ Interestingly, both multi-process (`worker: :process`) and multi-thread (`worker
 The following benchmarks are the results of running the benchmark suite.
 
 - macOS 14.4.1, Apple M1 Pro 10 cores (8 performance and 2 efficiency)
-- ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin22]
-- pbt commit hash 6f2c1cf1ab36d5d83a89fabb22da431e3600fe25
+- ruby 3.3.1 (2024-04-23 revision c56cd86388) +MN [arm64-darwin23]
+- pbt commit hash ecaecceb73a171042e52dbad25074f4f7dcfd55a
 
 ---
 
@@ -32,17 +32,17 @@ This runs a script that does not do any IO or CPU bound work.
 
 ```
 ruby benchmark/success_simple.rb
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +MN [arm64-darwin22]
+ruby 3.3.1 (2024-04-23 revision c56cd86388) +MN [arm64-darwin23]
 Warming up --------------------------------------
-              ractor    19.000 i/100ms
-             process     2.000 i/100ms
-              thread   114.000 i/100ms
-                none   234.000 i/100ms
+              ractor    21.000 i/100ms
+             process     3.000 i/100ms
+              thread   111.000 i/100ms
+                none   172.000 i/100ms
 Calculating -------------------------------------
-              ractor     75.717 (± 4.0%) i/s -    380.000 in   5.025954s
-             process      1.712 (± 0.0%) i/s -     10.000 in   5.840821s
-              thread      1.019k (±34.0%) i/s -      4.560k in   5.028774s
-                none      1.616k (±24.1%) i/s -      7.722k in   5.003744s
+              ractor     73.709 (± 8.1%) i/s -    378.000 in   5.166176s
+             process      1.868 (± 0.0%) i/s -     12.000 in   6.423704s
+              thread      1.028k (±33.4%) i/s -      4.773k in   5.123614s
+                none      1.534k (±24.4%) i/s -      7.224k in   5.037993s
 ```
 
 ### Benchmark success:cpu_bound
@@ -51,17 +51,17 @@ This runs a script that does CPU bound work.
 
 ```
 ruby benchmark/success_cpu_bound.rb
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +MN [arm64-darwin22]
+ruby 3.3.1 (2024-04-23 revision c56cd86388) +MN [arm64-darwin23]
 Warming up --------------------------------------
               ractor     3.000 i/100ms
              process     2.000 i/100ms
               thread     1.000 i/100ms
                 none     1.000 i/100ms
 Calculating -------------------------------------
-              ractor     35.688 (± 8.4%) i/s -    180.000 in   5.079922s
-             process     15.329 (± 6.5%) i/s -     78.000 in   5.097040s
-              thread      7.654 (± 0.0%) i/s -     39.000 in   5.095252s
-                none      7.707 (± 0.0%) i/s -     39.000 in   5.060309s
+              ractor     39.273 (± 2.5%) i/s -    198.000 in   5.042910s
+             process     20.631 (± 4.8%) i/s -    104.000 in   5.068093s
+              thread      7.657 (± 0.0%) i/s -     39.000 in   5.096493s
+                none      7.765 (± 0.0%) i/s -     39.000 in   5.022829s
 ```
 
 ### Benchmark success:io_bound
@@ -70,17 +70,17 @@ This runs a script that does IO bound work.
 
 ```
 ruby benchmark/success_io_bound.rb
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +MN [arm64-darwin22]
+ruby 3.3.1 (2024-04-23 revision c56cd86388) +MN [arm64-darwin23]
 Warming up --------------------------------------
               ractor    11.000 i/100ms
              process     2.000 i/100ms
-              thread    16.000 i/100ms
-                none    21.000 i/100ms
+              thread    15.000 i/100ms
+                none    20.000 i/100ms
 Calculating -------------------------------------
-              ractor     55.907 (± 3.6%) i/s -    286.000 in   5.122098s
-             process      9.916 (± 0.0%) i/s -     50.000 in   5.044945s
-              thread    131.280 (±17.5%) i/s -    656.000 in   5.148757s
-                none    144.364 (± 4.8%) i/s -    735.000 in   5.102093s
+              ractor     53.841 (± 3.7%) i/s -    275.000 in   5.114164s
+             process     10.077 (± 0.0%) i/s -     52.000 in   5.166346s
+              thread    130.750 (±16.8%) i/s -    645.000 in   5.057727s
+                none    151.102 (± 4.0%) i/s -    760.000 in   5.038146s
 ```
 
 ### Benchmark failure:simple
@@ -89,15 +89,15 @@ This runs a script that fails and shrink happens.
 
 ```
 ruby benchmark/failure_simple.rb
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +MN [arm64-darwin22]
+ruby 3.3.1 (2024-04-23 revision c56cd86388) +MN [arm64-darwin23]
 Warming up --------------------------------------
               ractor     7.000 i/100ms
              process     1.000 i/100ms
               thread    14.000 i/100ms
-                none   288.000 i/100ms
+                none   264.000 i/100ms
 Calculating -------------------------------------
-              ractor     13.104 (± 7.6%) i/s -     70.000 in   5.358898s
-             process      0.060 (± 0.0%) i/s -      1.000 in  16.545525s
-              thread    111.493 (±20.6%) i/s -    532.000 in   5.012879s
-                none      2.445k (±19.0%) i/s -     12.096k in   5.086548s
+              ractor     12.466 (± 8.0%) i/s -     63.000 in   5.080393s
+             process      0.059 (± 0.0%) i/s -      1.000 in  17.091278s
+              thread    110.228 (±20.0%) i/s -    532.000 in   5.054091s
+                none      2.425k (±23.1%) i/s -     11.616k in   5.053378s
 ```
