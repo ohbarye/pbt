@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [0.4.0] - 2024-05-06
+
+- Allow to use RSpec::Matchers for `worker: :none, :thread, :process` also.
+- Make error message short to keep focusing on failure causes.
+- Fix a bug for a case when parameters cannot be passed to a test block correctly.
+
 ## [0.3.0] - 2024-04-21
 
 - Add experimental_ractor_rspec_integration mode. Be careful, it's quite experimental.

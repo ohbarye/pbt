@@ -507,10 +507,10 @@ RSpec.describe Pbt::Check::Configuration do
         }.to raise_error(Pbt::PropertyFailure) do |e|
           expect(e.message).to include <<~MSG.chomp
             Property failed after 1 test(s)
-            { seed: 135479457171118952930684770951487304295 }
-            Counterexample: 0
-            Shrunk 21 time(s)
-            Got RSpec::Expectations::ExpectationNotMetError: expected 0 to be a kind of String
+              seed: 135479457171118952930684770951487304295
+              counterexample: 0
+              Shrunk 21 time(s)
+              Got RSpec::Expectations::ExpectationNotMetError: expected 0 to be a kind of String
           MSG
         end
       end
