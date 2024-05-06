@@ -114,7 +114,8 @@ module Pbt
           begin
             property.run(val)
             runner.handle_result(c)
-          rescue Exception => e # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
+          # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
+          rescue Exception => e # standard:disable Lint/RescueException:
             c.exception = e
             runner.handle_result(c)
             break # Ignore the rest of the cases. Just pick up the first failure.
@@ -162,7 +163,8 @@ module Pbt
         Parallel.map_with_index(runner, in_threads: Parallel.processor_count) do |val, index|
           Case.new(val:, index:).tap do |c|
             property.run(val)
-          rescue Exception => e # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
+          # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
+          rescue Exception => e # standard:disable Lint/RescueException:
             c.exception = e
             # It's possible to break this loop here by raising `Parallel::Break`.
             # But if it raises, we cannot fetch all cases' result. So this loop continues until the end.
@@ -183,7 +185,8 @@ module Pbt
         Parallel.map_with_index(runner, in_processes: Parallel.processor_count) do |val, index|
           Case.new(val:, index:).tap do |c|
             property.run(val)
-          rescue Exception => e # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
+          # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
+          rescue Exception => e # standard:disable Lint/RescueException:
             c.exception = e
             # It's possible to break this loop here by raising `Parallel::Break`.
             # But if it raises, we cannot fetch all cases' result. So this loop continues until the end.
