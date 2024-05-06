@@ -20,8 +20,6 @@ module Pbt
           message << error_backtrace
           message << if @run_details.verbose
             verbose_details
-          else
-            hint
           end
 
           raise PropertyFailure, message.join("\n") if message.size > 0
@@ -34,17 +32,17 @@ module Pbt
       def format_error_message
         <<~MSG.chomp
           Property failed after #{@run_details.num_runs} test(s)
-          { seed: #{@run_details.seed} }
-          Counterexample: #{@run_details.counterexample}
-          Shrunk #{@run_details.num_shrinks} time(s)
-          Got #{@run_details.error_instance.class}: #{@run_details.error_message}
+            seed: #{@run_details.seed}
+            counterexample: #{@run_details.counterexample}
+            Shrunk #{@run_details.num_shrinks} time(s)
+            Got #{@run_details.error_instance.class}: #{@run_details.error_message}
         MSG
       end
 
       def error_backtrace
         return "" if @run_details.error_instance.backtrace_locations.nil? # It can be nil.
 
-        i = @run_details.verbose ? -1 : 10
+        i = @run_details.verbose ? -1 : 3
         "    #{@run_details.error_instance.backtrace_locations[..i].join("\n    ")}"
       end
 
@@ -88,14 +86,6 @@ module Pbt
         end
 
         "\nExecution summary:\n#{summary_lines.join("\n")}\n"
-      end
-
-      # @return [String]
-      def hint
-        [
-          "\nHint: Set `verbose: true` in order to check the list of all failing values encountered during the run.",
-          "Hint: Set `seed: #{@run_details.seed}` in order to reproduce the failed test case with the same values."
-        ].join("\n")
       end
     end
   end
