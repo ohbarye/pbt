@@ -205,7 +205,7 @@ You can configure `Pbt` by calling `Pbt.configure` before running tests.
 ```ruby
 Pbt.configure do |config|
   # Whether to print verbose output. Default is `false`.
-  config.verbose = 100
+  config.verbose = false
 
   # The concurrency method to use. `:ractor`, `:thread`, `:process` and `:none` are supported. Default is `:none`.
   config.worker = :none
