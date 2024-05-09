@@ -11,7 +11,7 @@ module Pbt
         def setup_rspec_integration
           filepath, line = @predicate.source_location
           basename = File.basename(filepath, ".rb")
-          @class_name = basename.split("_").map(&:capitalize).join + line.to_s
+          @class_name = "Test" + basename.split("_").map(&:capitalize).join + line.to_s
           @method_name = "predicate_#{basename}_#{line}"
           define_ractor_callable_class
         end
