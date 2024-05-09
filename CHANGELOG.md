@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.4.1] - 2024-05-10
+
+- Fix a bug for experimental_ractor_rspec_integration mode. When a test file name starts with a number, it can't be a constant name.
+
 ## [0.4.0] - 2024-05-06
 
 - Allow to use RSpec::Matchers for `worker: :none, :thread, :process` also.
