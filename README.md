@@ -8,6 +8,8 @@ A property-based testing tool for Ruby with experimental features that allow you
 
 PBT stands for Property-Based Testing.
 
+As for the results of the parallelization experiment, please refer the talk at RubyKaigi 2024: [Unlocking Potential of Property Based Testing with Ractor](https://rubykaigi.org/2024/presentations/ohbarye.html).
+
 ## What's Property-Based Testing?
 
 Property-Based Testing is a testing methodology that focuses on the properties a system should always satisfy, rather than checking individual examples. Instead of writing tests for predefined inputs and outputs, PBT allows you to specify the general characteristics that your code should adhere to and then automatically generates a wide range of inputs to verify these properties.
@@ -39,29 +41,34 @@ Off course you can install with `gem intstall pbt`.
 ### Simple property
 
 ```ruby
-# Let's say you have a method that returns just a multiplicative inverse.
-def multiplicative_inverse(number)
-  Rational(1, number)
+# Let's say you have your own sort method.
+def sort(array)
+  return array if array.size <= 2 # Here's a bug! It should be 1.
+  pivot, *rest = array
+  left, right = rest.partition { |n| n <= pivot }
+  sort(left) + [pivot] + sort(right)
 end
 
 Pbt.assert do
-  # The given block is executed 100 times with different random numbers.
+  # The given block is executed 100 times with different arrays with random numbers.
   # Besides, the block runs in parallel by Ractor.
-  Pbt.property(Pbt.integer) do |number|
-    result = multiplicative_inverse(number)
-    raise "Result should be the multiplicative inverse of the number" if result * number != 1
+  Pbt.property(Pbt.array(Pbt.integer)) do |numbers|
+    result = sort(numbers)
+    result.each_cons(2) do |x, y|
+      raise "Sort algorithm is wrong." unless x <= y
+    end
   end
 end
 
-# If the function has a bug, the test fails with a counterexample.
-# For example, the multiplicative_inverse method doesn't work for 0 regardless of the behavior is intended or not.
+# If the function has a bug, the test fails and it reports a minimum counterexample.
+# For example, the sort method doesn't work for [0, -1].
 #
 # Pbt::PropertyFailure:
 #   Property failed after 23 test(s)
-#   { seed: 11001296583699917659214176011685741769 }
-#   Counterexample: 0
-#   Shrunk 3 time(s)
-#   Got ZeroDivisionError: divided by 0
+#   seed: 43738985293126714007411539287084402325
+#   counterexample: [0, -1]
+#   Shrunk 40 time(s)
+#   Got RuntimeError: Sort algorithm is wrong.
 ```
 
 ### Explain The Snippet
@@ -103,16 +110,16 @@ There are many built-in arbitraries in `Pbt`. You can use them to generate rando
 ```ruby
 rng = Random.new
 
-Pbt.integer.generate(rng) # => 42
+Pbt.integer.generate(rng)                  # => 42
 Pbt.integer(min: -1, max: 8).generate(rng) # => Integer between -1 and 8
 
-Pbt.symbol.generate(rng) # => :atq
+Pbt.symbol.generate(rng)                   # => :atq
 
-Pbt.ascii_char.generate(rng) # => "a"
-Pbt.ascii_string.generate(rng) # => "aagjZfao"
+Pbt.ascii_char.generate(rng)               # => "a"
+Pbt.ascii_string.generate(rng)             # => "aagjZfao"
 
-Pbt.boolean.generate(rng) # => true or false
-Pbt.constant(42).generate(rng) # => 42 always
+Pbt.boolean.generate(rng)                  # => true or false
+Pbt.constant(42).generate(rng)             # => 42 always
 ```
 
 #### Composites
@@ -120,15 +127,15 @@ Pbt.constant(42).generate(rng) # => 42 always
 ```ruby
 rng = Random.new
 
-Pbt.array(Pbt.integer).generate(rng) # => [121, -13141, 9825]
-Pbt.array(Pbt.integer, max: 1, empty: true).generate(rng) # => [] or [42] etc.
+Pbt.array(Pbt.integer).generate(rng)                        # => [121, -13141, 9825]
+Pbt.array(Pbt.integer, max: 1, empty: true).generate(rng)   # => [] or [42] etc.
 
-Pbt.tuple(Pbt.symbol, Pbt.integer).generate(rng) # => [:atq, 42]
+Pbt.tuple(Pbt.symbol, Pbt.integer).generate(rng)            # => [:atq, 42]
 
 Pbt.fixed_hash(x: Pbt.symbol, y: Pbt.integer).generate(rng) # => {x: :atq, y: 42}
-Pbt.hash(Pbt.symbol, Pbt.integer).generate(rng) # => {atq: 121, ygab: -1142}
+Pbt.hash(Pbt.symbol, Pbt.integer).generate(rng)             # => {atq: 121, ygab: -1142}
 
-Pbt.one_of(:a, 1, 0.1).generate(rng) # => :a or 1 or 0.1
+Pbt.one_of(:a, 1, 0.1).generate(rng)                        # => :a or 1 or 0.1
 ````
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.
@@ -144,10 +151,10 @@ When a test fails, you'll see a message like below.
 ```text
 Pbt::PropertyFailure:
   Property failed after 23 test(s)
-  { seed: 11001296583699917659214176011685741769 }
-  Counterexample: 0
-  Shrunk 3 time(s)
-  Got ZeroDivisionError: divided by 0
+  seed: 43738985293126714007411539287084402325
+  counterexample: [0, -1]
+  Shrunk 40 time(s)
+  Got RuntimeError: Sort algorithm is wrong.
   # and backtraces
 ```
 
@@ -155,7 +162,7 @@ You can reproduce the failure by passing the seed to `Pbt.assert`.
 
 ```ruby
 Pbt.assert(seed: 11001296583699917659214176011685741769) do
-  Pbt.property(Pbt.integer) do |number|
+  Pbt.property(Pbt.array(Pbt.integer)) do |number|
     # your test
   end
 end
@@ -365,6 +372,8 @@ Once this project finishes the following, we will release v1.0.0.
 - [ ] Implement frequency arbitrary
 - [ ] Statistics feature to aggregate generated values
 - [ ] Decide DSL
+- [ ] Try Fiber
+- [ ] Stateful property-based testing
 
 ## Development
 
