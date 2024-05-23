@@ -5,7 +5,7 @@ begin
   require "prism"
 rescue LoadError
   raise InvalidConfiguration,
-    "Prism gem (https://github.com/grosser/parallel) is required to use worker `:rator` and `:experimental_ractor_rspec_integration`. Please add `gem 'parallel'` to your Gemfile."
+    "Prism gem (https://github.com/ruby/prism) is required to use worker `:ractor` and `:experimental_ractor_rspec_integration`. Please add `gem 'prism'` to your Gemfile."
 end
 
 module Pbt
