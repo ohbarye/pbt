@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.4.2] - 2024-05-23
+
+- Fix Prism `LoadError` message [#27](https://github.com/ohbarye/pbt/pull/27) by @sambostock
+ 
 ## [0.4.1] - 2024-05-10
 
 - Fix a bug for experimental_ractor_rspec_integration mode. When a test file name starts with a number, it can't be a constant name.
