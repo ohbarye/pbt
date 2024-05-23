@@ -60,7 +60,7 @@ Pbt.assert do
   end
 end
 
-# If the function has a bug, the test fails and it reports a minimum counterexample.
+# If the method has a bug, the test fails and it reports a minimum counterexample.
 # For example, the sort method doesn't work for [0, -1].
 #
 # Pbt::PropertyFailure:
@@ -99,7 +99,7 @@ Here, we used only one type of arbitrary, `Pbt.integer`. There are many other bu
 In PBT, If a test fails, it attempts to shrink the case that caused the failure into a form that is easier for humans to understand.
 In other words, instead of stopping the test itself the first time it fails and reporting the failed value, it tries to find the minimal value that causes the error.
 
-When there is a test that fails when given an even number, a counterexample of `2` is simpler and easier to understand than `432743417662`.
+When there is a test that fails when given an even number, a counterexample of `[0, -1]` is simpler and easier to understand than any complex example like `[-897860, -930517, 577817, -16302, 310864, 856411, -304517, 86613, -78231]`.
 
 ### Arbitrary
 
@@ -161,7 +161,7 @@ Pbt::PropertyFailure:
 You can reproduce the failure by passing the seed to `Pbt.assert`.
 
 ```ruby
-Pbt.assert(seed: 11001296583699917659214176011685741769) do
+Pbt.assert(seed: 43738985293126714007411539287084402325) do
   Pbt.property(Pbt.array(Pbt.integer)) do |number|
     # your test
   end
@@ -184,25 +184,29 @@ The verbose mode prints the results of each tested values.
 
 ```text
 Encountered failures were:
-- [152477, 666997, -531468, -92182, 623948, 425913, 656138, 856463, -64529]
-- [76239, 666997, -531468, -92182, 623948]
-- [76239, 666997, -531468]
+- [-897860, -930517, 577817, -16302, 310864, 856411, -304517, 86613, -78231]
+- [310864, 856411, -304517, 86613, -78231]
+- [-304517, 86613, -78231]
 (snipped for README)
-- [2, 163]
-- [2, 11]
+- [0, -3]
+- [0, -2]
+- [0, -1]
 
 Execution summary:
-. × [152477, 666997, -531468, -92182, 623948, 425913, 656138, 856463, -64529]
-. . √ [152477, 666997, -531468, -92182, 623948]
-. . √ [-64529]
-. . × [76239, 666997, -531468, -92182, 623948, 425913, 656138, 856463, -64529]
-. . . × [76239, 666997, -531468, -92182, 623948]
+. × [-897860, -930517, 577817, -16302, 310864, 856411, -304517, 86613, -78231]
+. . √ [-897860, -930517, 577817, -16302, 310864]
+. . √ [-930517, 577817, -16302, 310864, 856411]
+. . √ [577817, -16302, 310864, 856411, -304517]
+. . √ [-16302, 310864, 856411, -304517, 86613]
+. . × [310864, 856411, -304517, 86613, -78231]
 (snipped for README)
-. . . . . . . . . . . . . . . . . √ [2, 21]
-. . . . . . . . . . . . . . . . . × [2, 11]
-. . . . . . . . . . . . . . . . . . √ []
-. . . . . . . . . . . . . . . . . . √ [2, 1]
-. . . . . . . . . . . . . . . . . . √ [2, 0]
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . √ [-2]
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . √ []
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . × [0, -1]
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . √ [0]
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . √ [-1]
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . √ []
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . √ [0, 0]
 ```
 
 ## Configuration
