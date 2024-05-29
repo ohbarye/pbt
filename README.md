@@ -51,7 +51,7 @@ end
 
 Pbt.assert do
   # The given block is executed 100 times with different arrays with random numbers.
-  # Besides, the block runs in parallel by Ractor.
+  # Besides, if you set `worker: :ractor` option to `assert` method, it runs in parallel using Ractor.
   Pbt.property(Pbt.array(Pbt.integer)) do |numbers|
     result = sort(numbers)
     result.each_cons(2) do |x, y|
