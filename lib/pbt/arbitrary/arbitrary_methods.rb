@@ -92,7 +92,7 @@ module Pbt
         one_of(*HEXA_CHARS)
       end
 
-      # For lowercase hexadecimal stings.
+      # For lowercase hexadecimal strings.
       #
       # @see Pbt.array
       # @param kwargs [Hash] Options for ArrayArbitrary. See `.array` for more information.
