@@ -22,7 +22,7 @@ module Pbt
         verbose: false,
         worker: :none,
         num_runs: 100,
-        seed: Random.new.seed,
+        seed: Random.new_seed,
         thread_report_on_exception: false,
         experimental_ractor_rspec_integration: false
       )
