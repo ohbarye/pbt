@@ -54,8 +54,6 @@ module Pbt
       #
       # - `:thread_report_on_exception`
       #   So many exception reports happen in Ractor and a console gets too messy. Suppress them to avoid that.
-      # - `:experimental_ractor_rspec_integration`
-      #   Allow to use Ractor with RSpec. This is an experimental feature and it's not stable.
       #
       # @param config [Hash] Configuration parameters.
       # @param property [Property]
@@ -64,21 +62,12 @@ module Pbt
         if config[:worker] == :ractor
           original_report_on_exception = Thread.report_on_exception
           Thread.report_on_exception = config[:thread_report_on_exception]
-
-          if config[:experimental_ractor_rspec_integration]
-            require "pbt/check/rspec_adapter/integration"
-            class << property
-              include Pbt::Check::RSpecAdapter::PropertyExtension
-            end
-            property.setup_rspec_integration
-          end
         end
 
         yield
       ensure
         if config[:worker] == :ractor
           Thread.report_on_exception = original_report_on_exception
-          property.teardown_rspec_integration if config[:experimental_ractor_rspec_integration]
         end
       end
 
@@ -129,24 +118,9 @@ module Pbt
           c.ractor.take
           runner.handle_result(c)
         rescue => e
-          handle_ractor_error(e.cause, c)
+          c.exception = e.cause # Ractor error is wrapped in a Ractor::RemoteError. We need to get the cause.
           runner.handle_result(c)
           break # Ignore the rest of the cases. Just pick up the first failure.
-        end
-      end
-
-      def handle_ractor_error(cause, c)
-        # Ractor error is wrapped in a Ractor::RemoteError. We need to get the cause.
-        unless defined?(Pbt::Check::RSpecAdapter) && cause.is_a?(Pbt::Check::RSpecAdapter::ExpectationNotMet) # Unknown error.
-          c.exception = cause
-          return
-        end
-
-        # Convert Pbt's custom error to RSpec's error.
-        begin
-          RSpec::Expectations::ExpectationHelper.handle_failure(cause.matcher, cause.custom_message, cause.failure_message_method)
-        rescue RSpec::Expectations::ExpectationNotMetError => e # The class inherits Exception, not StandardError.
-          c.exception = e
         end
       end
     end
