@@ -17,26 +17,6 @@ Benchmark.ips do |x|
     # noop
   end
 
-  x.report("process") do
-    Pbt.assert(worker: :process, seed:, num_runs: 100) do
-      Pbt.property(Pbt.integer) do |x|
-        task(x)
-      end
-    end
-  rescue Pbt::PropertyFailure
-    # noop
-  end
-
-  x.report("thread") do
-    Pbt.assert(worker: :thread, seed:, num_runs: 100) do
-      Pbt.property(Pbt.integer) do |x|
-        task(x)
-      end
-    end
-  rescue Pbt::PropertyFailure
-    # noop
-  end
-
   x.report("none") do
     Pbt.assert(worker: :none, seed:, num_runs: 100) do
       Pbt.property(Pbt.integer) do |x|

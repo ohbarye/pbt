@@ -18,22 +18,6 @@ Benchmark.ips do |x|
     end
   end
 
-  x.report("process") do
-    Pbt.assert(worker: :process, seed:, num_runs: 100) do
-      Pbt.property(Pbt.ascii_string) do |str|
-        task(str)
-      end
-    end
-  end
-
-  x.report("thread") do
-    Pbt.assert(worker: :thread, seed:, num_runs: 100) do
-      Pbt.property(Pbt.ascii_string) do |str|
-        task(str)
-      end
-    end
-  end
-
   x.report("none") do
     Pbt.assert(worker: :none, seed:, num_runs: 100) do
       Pbt.property(Pbt.ascii_string) do |str|
