@@ -96,10 +96,6 @@ module Pbt
             run_it_in_sequential(property, runner)
           in :ractor
             run_it_in_ractors(property, runner)
-          in :process
-            run_it_in_processes(property, runner)
-          in :thread
-            run_it_in_threads(property, runner)
           end
         end
         runner.run_execution
@@ -152,60 +148,6 @@ module Pbt
         rescue RSpec::Expectations::ExpectationNotMetError => e # The class inherits Exception, not StandardError.
           c.exception = e
         end
-      end
-
-      # @param property [Property] Property to test.
-      # @param runner [RunnerIterator]
-      # @return [void]
-      def run_it_in_threads(property, runner)
-        require_parallel
-
-        Parallel.map_with_index(runner, in_threads: Parallel.processor_count) do |val, index|
-          Case.new(val:, index:).tap do |c|
-            property.run(val)
-          # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
-          rescue Exception => e # standard:disable Lint/RescueException:
-            c.exception = e
-            # It's possible to break this loop here by raising `Parallel::Break`.
-            # But if it raises, we cannot fetch all cases' result. So this loop continues until the end.
-          end
-        end.each do |c|
-          runner.handle_result(c)
-          break if c.exception
-          # Ignore the rest of the cases. Just pick up the first failure.
-        end
-      end
-
-      # @param property [Property] Property to test.
-      # @param runner [RunnerIterator]
-      # @return [void]
-      def run_it_in_processes(property, runner)
-        require_parallel
-
-        Parallel.map_with_index(runner, in_processes: Parallel.processor_count) do |val, index|
-          Case.new(val:, index:).tap do |c|
-            property.run(val)
-          # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
-          rescue Exception => e # standard:disable Lint/RescueException:
-            c.exception = e
-            # It's possible to break this loop here by raising `Parallel::Break`.
-            # But if it raises, we cannot fetch all cases' result. So this loop continues until the end.
-          end
-        end.each do |c|
-          runner.handle_result(c)
-          break if c.exception
-          # Ignore the rest of the cases. Just pick up the first failure.
-        end
-      end
-
-      # Load Parallel gem. If it's not installed, raise an error.
-      # @see https://github.com/grosser/parallel
-      # @raise [InvalidConfiguration]
-      def require_parallel
-        require "parallel"
-      rescue LoadError
-        raise InvalidConfiguration,
-          "Parallel gem (https://github.com/grosser/parallel) is required to use worker `:process` or `:thread`. Please add `gem 'parallel'` to your Gemfile."
       end
     end
   end
