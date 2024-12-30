@@ -1,7 +1,9 @@
 ## [Unreleased]
 
-- Drop `:process` and `:thread` workers since there are no concrete use cases.
-- Drop `:experimental_ractor_rspec_integration` option since there are no concrete use cases.
+## [0.5.0] - 2024-12-30
+
+- [Breaking change] Drop `:process` and `:thread` workers since there are no concrete use cases.
+- [Breaking change] Drop `:experimental_ractor_rspec_integration` option since there are no concrete use cases.
 
 ## [0.4.2] - 2024-05-23
 
