@@ -9,7 +9,6 @@ module Pbt
       :num_runs,
       :seed,
       :thread_report_on_exception,
-      :experimental_ractor_rspec_integration,
       keyword_init: true
     ) do
       # @param verbose [Boolean] Whether to print verbose output. Default is `false`.
@@ -17,14 +16,12 @@ module Pbt
       # @param num_runs [Integer] The number of runs to perform. Default is `100`.
       # @param seed [Integer] The seed to use for random number generation. It's useful to reproduce failed test with the seed you'd pick up from failure messages. Default is a random seed.
       # @param thread_report_on_exception [Boolean] Whether to report exceptions in threads. It's useful to suppress error logs on Ractor that reports many errors. Default is `false`.
-      # @param experimental_ractor_rspec_integration [Boolean] Whether to allow RSpec expectation and matchers in Ractor. It's quite experimental! Default is `false`.
       def initialize(
         verbose: false,
         worker: :none,
         num_runs: 100,
         seed: Random.new_seed,
-        thread_report_on_exception: false,
-        experimental_ractor_rspec_integration: false
+        thread_report_on_exception: false
       )
         super
       end
