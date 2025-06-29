@@ -11,3 +11,6 @@
 .rspec_status
 
 Gemfile.lock
+
+# Claude Code
+.claude/settings.local.json
