@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.5.1] - 2025-06-29
+
 - Fix `IntegerArbitrary#shrink` to respect min/max bounds [#36](https://github.com/ohbarye/pbt/pull/36)
 
 ## [0.5.0] - 2024-12-30
@@ -30,7 +32,7 @@
 ## [0.2.0] - 2024-04-17
 
 - Add verbose mode. It's useful to debug the test case.
- 
+
 ## [0.1.1] - 2024-04-14
 
 - Change default worker from `:ractor` to `:none`
@@ -41,15 +43,15 @@
 - Implement composite arbitraries
 - Support shrinking
 - Support multiple concurrency methods
-    - Ractor
-    - Process
-    - Thread
-    - None (Run tests sequentially)
+  - Ractor
+  - Process
+  - Thread
+  - None (Run tests sequentially)
 - Documentation
-    - Add better examples
-    - Arbitrary usage
-    - Configuration
- 
+  - Add better examples
+  - Arbitrary usage
+  - Configuration
+
 ## [0.0.1] - 2024-01-27
 
 - Initial release (Proof of concept)
