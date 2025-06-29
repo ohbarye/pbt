@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Fix `IntegerArbitrary#shrink` to respect min/max bounds [#36](https://github.com/ohbarye/pbt/pull/36)
+
 ## [0.5.0] - 2024-12-30
 
 - [Breaking change] Drop `:process` and `:thread` workers since there are no concrete use cases.
