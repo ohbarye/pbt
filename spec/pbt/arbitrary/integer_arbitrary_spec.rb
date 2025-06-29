@@ -58,7 +58,7 @@ RSpec.describe Pbt::Arbitrary::IntegerArbitrary do
       it "shrinks values within the specified range" do
         arb = Pbt::Arbitrary::IntegerArbitrary.new(25, 65)
         shrunk_values = arb.shrink(50).to_a
-        
+
         expect(shrunk_values).to all(be >= 25)
         expect(shrunk_values).to all(be <= 65)
       end
@@ -66,7 +66,7 @@ RSpec.describe Pbt::Arbitrary::IntegerArbitrary do
       it "shrinks from max value respecting the min constraint" do
         arb = Pbt::Arbitrary::IntegerArbitrary.new(25, 65)
         shrunk_values = arb.shrink(65).to_a
-        
+
         expect(shrunk_values).to all(be >= 25)
         expect(shrunk_values).to all(be <= 65)
         expect(shrunk_values.last).to be >= 25
@@ -75,14 +75,14 @@ RSpec.describe Pbt::Arbitrary::IntegerArbitrary do
       it "shrinks from min value respecting the min constraint" do
         arb = Pbt::Arbitrary::IntegerArbitrary.new(25, 65)
         shrunk_values = arb.shrink(25).to_a
-        
+
         expect(shrunk_values).to be_empty
       end
 
       it "shrinks negative range values within constraints" do
         arb = Pbt::Arbitrary::IntegerArbitrary.new(-50, -10)
         shrunk_values = arb.shrink(-20).to_a
-        
+
         expect(shrunk_values).to all(be >= -50)
         expect(shrunk_values).to all(be <= -10)
       end

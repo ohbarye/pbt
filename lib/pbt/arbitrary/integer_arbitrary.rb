@@ -20,7 +20,13 @@ module Pbt
       end
 
       # @see Arbitrary#shrink
-      def shrink(current, target: DEFAULT_TARGET)
+      def shrink(current, target: nil)
+        # If no target is specified, use the appropriate bound as target
+        target ||= DEFAULT_TARGET.clamp(@min, @max)
+
+        # Ensure target is within bounds
+        target = target.clamp(@min, @max)
+
         gap = current - target
         return Enumerator.new { |_| } if gap == 0
 
@@ -30,9 +36,14 @@ module Pbt
           while (diff = (current - target).abs) > 1
             halved = diff / 2
             current -= is_positive_gap ? halved : -halved
+            # Ensure current stays within bounds
+            current = current.clamp(@min, @max)
             y.yield current
           end
-          y.yield target # no diff here
+          # Only yield target if it's different from current
+          if current != target
+            y.yield target
+          end
         end
       end
     end
