@@ -29,7 +29,7 @@ module Pbt
       #
       # @example
       #   integer_generator = Pbt.integer
-      #   num_str_generator = integer_arb.map(->(n){ n.to_s }, ->(s) {s.to_i})
+      #   num_str_generator = integer_generator.map(->(n){ n.to_s }, ->(s) {s.to_i})
       #
       # @param mapper [Proc] Proc to map generated values. Mainly used for generation.
       # @param unmapper [Proc] Proc to unmap generated values. Used for shrinking.
@@ -45,8 +45,8 @@ module Pbt
       #
       # @example
       #   integer_generator = Pbt.integer
-      #   even_integer_generator = integer_arb.filter { |x| x.even? }
-      #   # or `integer_arb.filter(&:even?)`
+      #   even_integer_generator = integer_generator.filter { |x| x.even? }
+      #   # or `integer_generator.filter(&:even?)`
       #
       # @param refinement [Proc] Predicate proc to test each produced element. Return true to keep the element, false otherwise.
       # @return [FilterArbitrary] New arbitrary filtered using `refinement`.
