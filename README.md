@@ -140,6 +140,96 @@ Pbt.one_of(:a, 1, 0.1).generate(rng)                        # => :a or 1 or 0.1
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.
 
+## Stateful Testing (Experimental)
+
+`Pbt` also provides an experimental stateful property API for model-based / command-based testing.
+It is designed as a property-compatible object (`generate`, `shrink`, `run`) so it works with the existing runner (`Pbt.assert` / `Pbt.check`) without changing the runner API.
+
+### Minimal usage
+
+```ruby
+class CounterModel
+  def initialize
+    @inc = IncrementCommand.new
+  end
+
+  def initial_state
+    0
+  end
+
+  def commands(_state)
+    [@inc]
+  end
+end
+
+class IncrementCommand
+  def name
+    :increment
+  end
+
+  def arguments
+    Pbt.nil
+  end
+
+  def applicable?(_state)
+    true
+  end
+
+  def next_state(state, _args)
+    state + 1
+  end
+
+  def run!(sut, _args)
+    sut.increment
+  end
+
+  def verify!(before_state:, after_state:, args: _, result:, sut:)
+    raise "unexpected result" unless result == after_state
+    raise "state mismatch" unless after_state == before_state + 1
+    raise "sut mismatch" unless sut.value == after_state
+  end
+end
+
+class Counter
+  attr_reader :value
+
+  def initialize
+    @value = 0
+  end
+
+  def increment
+    @value += 1
+  end
+end
+
+Pbt.assert(worker: :none) do
+  Pbt.stateful(
+    model: CounterModel.new,
+    sut: -> { Counter.new },
+    max_steps: 20
+  )
+end
+```
+
+### Expected interfaces
+
+`Pbt.stateful(model:, sut:, max_steps:)` expects the following duck-typed interfaces:
+
+- `model.initial_state`
+- `model.commands(state)` -> `Array<command>`
+- `command.name`
+- `command.arguments` (a `Pbt` arbitrary)
+- `command.applicable?(state)` -> `true` / `false`
+- `command.next_state(state, args)` -> next model state
+- `command.run!(sut, args)` -> command result
+- `command.verify!(before_state:, after_state:, args:, result:, sut:)`
+
+### Current limitations (MVP)
+
+- Use `worker: :none` for stateful properties.
+- `worker: :ractor` is currently unsupported and raises `Pbt::InvalidConfiguration`.
+- Shrinking supports shorter prefixes and command-argument shrinking (using `command.arguments.shrink(args)`).
+
 ## What if property-based tests fail?
 
 Once a test fails it's time to debug. `Pbt` provides some features to help you debug.
