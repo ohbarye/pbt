@@ -40,10 +40,25 @@ RSpec.describe Pbt do
         {command: model.pop_command, args: nil}
       ]
 
-      expect(property.shrink(sequence).to_a).to eq([
+      expect(property.shrink(sequence).to_a.first(3)).to eq([
         sequence.first(2),
         sequence.first(1),
         []
+      ])
+    end
+
+    it "shrinks command arguments using each command arbitrary after prefix shrinks" do
+      property = Pbt.stateful(model:, sut: -> { CorrectStack.new })
+
+      sequence = [
+        {command: model.push_command, args: 3}
+      ]
+
+      expect(property.shrink(sequence).to_a).to eq([
+        [],
+        [{command: model.push_command, args: 2}],
+        [{command: model.push_command, args: 1}],
+        [{command: model.push_command, args: 0}]
       ])
     end
   end

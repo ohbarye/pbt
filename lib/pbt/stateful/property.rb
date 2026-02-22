@@ -64,6 +64,15 @@ module Pbt
           (sequence.length - 1).downto(0) do |length|
             y << sequence.first(length)
           end
+
+          sequence.each_with_index do |step, index|
+            command, args = unpack_step(step)
+
+            command.arguments.shrink(args).each do |shrunk_args|
+              candidate = replace_step(sequence, index, command:, args: shrunk_args)
+              y << candidate if valid_sequence?(candidate)
+            end
+          end
         end
       end
 
@@ -121,6 +130,49 @@ module Pbt
       # @return [String]
       def command_name(command)
         command.respond_to?(:name) ? command.name.to_s : (command.class.name || command.class.inspect)
+      end
+
+      # @param sequence [Array<Hash, Step>]
+      # @param index [Integer]
+      # @param command [Object]
+      # @param args [Object]
+      # @return [Array<Hash, Step>]
+      def replace_step(sequence, index, command:, args:)
+        candidate = sequence.dup
+        candidate[index] = rebuild_step(sequence[index], command:, args:)
+        candidate
+      end
+
+      # @param step [Hash, Step]
+      # @param command [Object]
+      # @param args [Object]
+      # @return [Hash, Step]
+      def rebuild_step(step, command:, args:)
+        case step
+        in Step
+          Step.new(command:, args:)
+        in Hash
+          {command:, args:}
+        else
+          raise ArgumentError, "invalid stateful step: #{step.inspect}"
+        end
+      end
+
+      # @param sequence [Array<Hash, Step>]
+      # @return [Boolean]
+      def valid_sequence?(sequence)
+        state = @model.initial_state
+
+        sequence.each do |step|
+          command, args = unpack_step(step)
+          return false unless command.applicable?(state)
+
+          state = command.next_state(state, args)
+        end
+
+        true
+      rescue StandardError
+        false
       end
     end
   end
