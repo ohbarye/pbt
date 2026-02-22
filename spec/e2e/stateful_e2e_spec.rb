@@ -38,7 +38,7 @@ RSpec.describe Pbt do
           Pbt.stateful(model: PositiveArgFailureModel.new, sut: -> { Object.new }, max_steps: 1)
         end
       }.to raise_error(Pbt::PropertyFailure) do |e|
-        expect(e.message).to include("counterexample: [#<Pbt::Stateful::Step command=:positive_only args=1>]")
+        expect(e.message).to include("counterexample: [#<Pbt::Stateful::Step command=:positive_only, args=1>]")
         expect(e.message).to include("Got RuntimeError: stateful step 0 (positive_only): positive arg required: 1")
         expect(e.message[/Shrunk (\d+) time\(s\)/, 1].to_i).to be > 0
       end

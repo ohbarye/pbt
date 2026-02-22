@@ -7,7 +7,7 @@ module Pbt
     class Property
       Step = Struct.new(:command, :args, keyword_init: true) do
         def inspect
-          "#<Pbt::Stateful::Step command=#{command_label} args=#{args.inspect}>"
+          "#<Pbt::Stateful::Step command=#{command_label}, args=#{args.inspect}>"
         end
 
         private

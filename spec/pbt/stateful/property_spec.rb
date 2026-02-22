@@ -12,6 +12,12 @@ RSpec.describe Pbt do
       expect(property).to respond_to(:run)
     end
 
+    it "formats stateful steps with a readable inspect representation" do
+      step = Pbt::Stateful::Property::Step.new(command: model.push_command, args: 1)
+
+      expect(step.inspect).to eq("#<Pbt::Stateful::Step command=:push, args=1>")
+    end
+
     it "generates executable command sequences that respect preconditions" do
       property = Pbt.stateful(model:, sut: -> { CorrectStack.new }, max_steps: 10)
       sequence = property.generate(Random.new(1234))
