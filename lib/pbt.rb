@@ -5,6 +5,7 @@ require_relative "pbt/arbitrary/arbitrary_methods"
 require_relative "pbt/check/runner_methods"
 require_relative "pbt/check/property"
 require_relative "pbt/check/configuration"
+require_relative "pbt/stateful/property"
 
 module Pbt
   # Represents a property-based test failure.
@@ -42,6 +43,29 @@ module Pbt
   def self.property(*args, **kwargs, &predicate)
     arb = to_arbitrary(args, kwargs)
     Check::Property.new(arb, &predicate)
+  end
+
+  # Create a stateful property-based test backed by a model and a SUT factory.
+  # The returned object is compatible with `Pbt.assert` / `Pbt.check`.
+  #
+  # The model object is expected to provide:
+  # - `initial_state`
+  # - `commands(state)` -> Array of command objects
+  #
+  # Each command object is expected to provide:
+  # - `name`
+  # - `arguments` (an arbitrary)
+  # - `applicable?(state)` -> bool
+  # - `next_state(state, args)`
+  # - `run!(sut, args)` -> result
+  # - `verify!(before_state:, after_state:, args:, result:, sut:)`
+  #
+  # @param model [Object]
+  # @param sut [Proc] Factory proc that returns a fresh SUT per run.
+  # @param max_steps [Integer]
+  # @return [Pbt::Stateful::Property]
+  def self.stateful(model:, sut:, max_steps: 20)
+    Stateful::Property.new(model:, sut:, max_steps:)
   end
 
   class << self
