@@ -86,6 +86,36 @@ RSpec.describe Pbt do
         [{command: model.command, args: 0}]
       ])
     end
+
+    it "shrinks in a stable order: prefixes first, then command args from earlier steps" do
+      property = Pbt.stateful(model:, sut: -> { CorrectStack.new })
+      sequence = [
+        {command: model.push_command, args: 1},
+        {command: model.push_command, args: 2},
+        {command: model.pop_command, args: nil}
+      ]
+
+      expect(property.shrink(sequence).to_a).to eq([
+        sequence.first(2),
+        sequence.first(1),
+        [],
+        [
+          {command: model.push_command, args: 0},
+          {command: model.push_command, args: 2},
+          {command: model.pop_command, args: nil}
+        ],
+        [
+          {command: model.push_command, args: 1},
+          {command: model.push_command, args: 1},
+          {command: model.pop_command, args: nil}
+        ],
+        [
+          {command: model.push_command, args: 1},
+          {command: model.push_command, args: 0},
+          {command: model.pop_command, args: nil}
+        ]
+      ])
+    end
   end
 
   class StackModel
