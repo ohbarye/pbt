@@ -22,6 +22,18 @@ RSpec.describe Pbt do
         expect(e.message[/Shrunk (\d+) time\(s\)/, 1].to_i).to be > 0
       end
     end
+
+    it "shrinks command arguments in the final stateful counterexample" do
+      expect {
+        Pbt.assert(seed: 1, num_runs: 1, verbose: false) do
+          Pbt.stateful(model: PositiveArgFailureModel.new, sut: -> { Object.new }, max_steps: 1)
+        end
+      }.to raise_error(Pbt::PropertyFailure) do |e|
+        expect(e.message).to include("counterexample: [#<Pbt::Stateful::Step command=:positive_only args=1>]")
+        expect(e.message).to include("Got RuntimeError: stateful step 0 (positive_only): positive arg required: 1")
+        expect(e.message[/Shrunk (\d+) time\(s\)/, 1].to_i).to be > 0
+      end
+    end
   end
 
   class PassingCounterModel
@@ -102,6 +114,46 @@ RSpec.describe Pbt do
 
     def verify!(before_state:, **)
       raise "boom at state=#{before_state}"
+    end
+  end
+
+  class PositiveArgFailureModel
+    def initialize
+      @command = PositiveArgFailureCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class PositiveArgFailureCommand
+    def name
+      :positive_only
+    end
+
+    def arguments
+      Pbt.integer(min: 0, max: 3)
+    end
+
+    def applicable?(_state)
+      true
+    end
+
+    def next_state(state, args)
+      state + args
+    end
+
+    def run!(_sut, args)
+      args
+    end
+
+    def verify!(args:, **)
+      raise "positive arg required: #{args}" if args.positive?
     end
   end
 end
