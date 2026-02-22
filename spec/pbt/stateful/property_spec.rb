@@ -74,6 +74,18 @@ RSpec.describe Pbt do
         [{command: model.push_command, args: 0}]
       ])
     end
+
+    it "does not emit duplicate shrink candidates" do
+      model = DuplicateShrinkModel.new
+      property = Pbt.stateful(model:, sut: -> { Object.new })
+      sequence = [{command: model.command, args: 2}]
+
+      expect(property.shrink(sequence).to_a).to eq([
+        [],
+        [{command: model.command, args: 1}],
+        [{command: model.command, args: 0}]
+      ])
+    end
   end
 
   class StackModel
@@ -170,6 +182,62 @@ RSpec.describe Pbt do
   class BuggyStack < CorrectStack
     def pop
       @values.shift
+    end
+  end
+
+  class DuplicateShrinkModel
+    attr_reader :command
+
+    def initialize
+      @command = DuplicateShrinkCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class DuplicateShrinkCommand
+    def name
+      :dup_shrink
+    end
+
+    def arguments
+      DuplicateShrinkArbitrary.new
+    end
+
+    def applicable?(_state)
+      true
+    end
+
+    def next_state(state, _args)
+      state
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class DuplicateShrinkArbitrary < Pbt::Arbitrary::Arbitrary
+    def generate(rng)
+      rng.rand(0..2)
+    end
+
+    def shrink(_current)
+      Enumerator.new do |y|
+        y << 1
+        y << 1
+        y << 0
+      end
     end
   end
 end

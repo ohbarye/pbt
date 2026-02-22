@@ -61,8 +61,10 @@ module Pbt
       # @return [Enumerator<Array<Hash, Step>>]
       def shrink(sequence)
         Enumerator.new do |y|
+          seen = {}
+
           (sequence.length - 1).downto(0) do |length|
-            y << sequence.first(length)
+            yield_shrink_candidate(y, seen, sequence.first(length))
           end
 
           sequence.each_with_index do |step, index|
@@ -70,7 +72,9 @@ module Pbt
 
             command.arguments.shrink(args).each do |shrunk_args|
               candidate = replace_step(sequence, index, command:, args: shrunk_args)
-              y << candidate if valid_sequence?(candidate)
+              next unless valid_sequence?(candidate)
+
+              yield_shrink_candidate(y, seen, candidate)
             end
           end
         end
@@ -185,6 +189,17 @@ module Pbt
         true
       rescue StandardError
         false
+      end
+
+      # @param y [Enumerator::Yielder]
+      # @param seen [Hash{Array<Hash, Step> => true}]
+      # @param candidate [Array<Hash, Step>]
+      # @return [void]
+      def yield_shrink_candidate(y, seen, candidate)
+        return if seen[candidate]
+
+        seen[candidate] = true
+        y << candidate
       end
     end
   end
