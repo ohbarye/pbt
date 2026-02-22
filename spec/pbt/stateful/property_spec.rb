@@ -31,6 +31,19 @@ RSpec.describe Pbt do
       expect { property.run(sequence) }.to raise_error(RuntimeError, /pop mismatch/)
     end
 
+    it "includes failing step args in wrapped stateful error messages" do
+      property = Pbt.stateful(model:, sut: -> { BuggyStack.new })
+
+      sequence = [
+        {command: model.push_command, args: 1},
+        {command: model.push_command, args: 2},
+        {command: model.pop_command, args: nil}
+      ]
+
+      expect { property.run(sequence) }
+        .to raise_error(RuntimeError, /stateful step 2 \(pop\): .* \[args=nil\]/)
+    end
+
     it "shrinks sequences by trying shorter prefixes first" do
       property = Pbt.stateful(model:, sut: -> { CorrectStack.new })
 

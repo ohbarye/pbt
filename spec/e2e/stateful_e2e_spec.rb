@@ -18,6 +18,7 @@ RSpec.describe Pbt do
         expect(e.message).to include("counterexample:")
         expect(e.message).to include("command=:boom")
         expect(e.message).to include("Got RuntimeError: stateful step 0 (boom): boom at state=0")
+        expect(e.message).to include("[args=nil]")
         expect(e.message).to match(/Shrunk (\d+) time\(s\)/)
         expect(e.message[/Shrunk (\d+) time\(s\)/, 1].to_i).to be > 0
       end

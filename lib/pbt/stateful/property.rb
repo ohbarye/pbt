@@ -104,7 +104,9 @@ module Pbt
               sut:
             )
           rescue Exception => e # standard:disable Lint/RescueException:
-            raise e.class, "stateful step #{index} (#{command_name(command)}): #{e.message}", e.backtrace
+            raise e.class,
+              "stateful step #{index} (#{command_name(command)}): #{e.message} [args=#{args.inspect}]",
+              e.backtrace
           end
 
           state = after_state
