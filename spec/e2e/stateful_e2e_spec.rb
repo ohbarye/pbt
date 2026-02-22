@@ -8,6 +8,14 @@ RSpec.describe Pbt do
       end
     end
 
+    it "rejects ractor worker with a clear configuration error" do
+      expect {
+        Pbt.check(seed: 1, num_runs: 1, worker: :ractor) do
+          Pbt.stateful(model: PassingCounterModel.new, sut: -> { Object.new }, max_steps: 1)
+        end
+      }.to raise_error(Pbt::InvalidConfiguration, /Pbt\.stateful .*worker: :none/)
+    end
+
     it "reports stateful step context and shrink details on failure" do
       expect {
         Pbt.assert(seed: 1, num_runs: 1, verbose: false) do

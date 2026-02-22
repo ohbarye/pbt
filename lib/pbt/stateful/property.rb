@@ -76,6 +76,16 @@ module Pbt
         end
       end
 
+      # Stateful properties currently require sequential execution because the model,
+      # commands and SUT factory are ordinary Ruby objects and are not guaranteed to be
+      # Ractor-shareable.
+      #
+      # @param _sequence [Array<Hash, Step>]
+      # @raise [Pbt::InvalidConfiguration]
+      def run_in_ractor(_sequence)
+        raise Pbt::InvalidConfiguration, "Pbt.stateful does not support worker: :ractor yet; use worker: :none"
+      end
+
       # Run the command sequence against a fresh SUT and verify each step.
       #
       # @param sequence [Array<Hash, Step>]
