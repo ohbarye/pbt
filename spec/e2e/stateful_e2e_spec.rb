@@ -45,6 +45,7 @@ RSpec.describe Pbt do
     end
   end
 
+  # standard:disable Lint/ConstantDefinitionInBlock
   class PassingCounterModel
     def initialize
       @command = PassingCounterCommand.new
@@ -80,7 +81,7 @@ RSpec.describe Pbt do
       nil
     end
 
-    def verify!(before_state:, after_state:, args: _, result:, sut: _)
+    def verify!(before_state:, after_state:, result:, args: _, sut: _)
       raise "unexpected result" unless result.nil?
       raise "state mismatch" unless after_state == before_state + 1
     end
@@ -165,4 +166,5 @@ RSpec.describe Pbt do
       raise "positive arg required: #{args}" if args.positive?
     end
   end
+  # standard:enable Lint/ConstantDefinitionInBlock
 end

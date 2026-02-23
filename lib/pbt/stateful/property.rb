@@ -187,7 +187,7 @@ module Pbt
         end
 
         true
-      rescue StandardError
+      rescue
         false
       end
 

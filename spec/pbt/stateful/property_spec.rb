@@ -124,6 +124,7 @@ RSpec.describe Pbt do
     end
   end
 
+  # standard:disable Lint/ConstantDefinitionInBlock
   class StackModel
     attr_reader :push_command, :pop_command
 
@@ -162,7 +163,7 @@ RSpec.describe Pbt do
       sut.push(args)
     end
 
-    def verify!(before_state: _, after_state:, args: _, result: _, sut:)
+    def verify!(after_state:, sut:, before_state: _, args: _, result: _)
       raise "push mismatch" unless sut.snapshot == after_state
     end
   end
@@ -188,7 +189,7 @@ RSpec.describe Pbt do
       sut.pop
     end
 
-    def verify!(before_state:, after_state: _, args: _, result:, sut:)
+    def verify!(before_state:, result:, sut:, after_state: _, args: _)
       expected = before_state.last
 
       raise "pop mismatch: expected=#{expected.inspect} actual=#{result.inspect}" unless result == expected
@@ -276,4 +277,5 @@ RSpec.describe Pbt do
       end
     end
   end
+  # standard:enable Lint/ConstantDefinitionInBlock
 end
