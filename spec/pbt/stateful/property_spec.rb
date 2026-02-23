@@ -25,6 +25,20 @@ RSpec.describe Pbt do
       expect { property.run(sequence) }.not_to raise_error
     end
 
+    it "raises a clear error when model.commands(state) does not return an Array" do
+      property = Pbt.stateful(model: NonArrayCommandsModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(Random.new(1)) }
+        .to raise_error(Pbt::InvalidConfiguration, /model\.commands\(state\) must return Array.*got Hash.*context=generate/i)
+    end
+
+    it "raises a clear error listing missing command protocol methods" do
+      property = Pbt.stateful(model: MissingProtocolCommandModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(Random.new(1)) }
+        .to raise_error(Pbt::InvalidConfiguration, /command protocol mismatch.*MissingProtocolCommand.*missing: run!, verify!/i)
+    end
+
     it "detects postcondition failures on a buggy SUT" do
       property = Pbt.stateful(model:, sut: -> { BuggyStack.new })
 
@@ -275,6 +289,48 @@ RSpec.describe Pbt do
         y << 1
         y << 0
       end
+    end
+  end
+
+  class NonArrayCommandsModel
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      {oops: :not_an_array}
+    end
+  end
+
+  class MissingProtocolCommandModel
+    def initialize
+      @command = MissingProtocolCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class MissingProtocolCommand
+    def name
+      :broken
+    end
+
+    def arguments
+      Pbt.nil
+    end
+
+    def applicable?(_state)
+      true
+    end
+
+    def next_state(state, _args)
+      state
     end
   end
   # standard:enable Lint/ConstantDefinitionInBlock

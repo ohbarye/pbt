@@ -5,6 +5,15 @@ module Pbt
     # Property-compatible wrapper for command-based stateful testing.
     # It provides `generate`, `shrink` and `run`, so existing runners can execute it.
     class Property
+      REQUIRED_COMMAND_METHODS = %i[
+        name
+        arguments
+        applicable?
+        next_state
+        run!
+        verify!
+      ].freeze
+
       Step = Struct.new(:command, :args, keyword_init: true) do
         def inspect
           "#<Pbt::Stateful::Step command=#{command_label}, args=#{args.inspect}>"
@@ -43,7 +52,7 @@ module Pbt
         sequence = []
 
         length.times do
-          commands = @model.commands(state).select { |cmd| cmd.applicable?(state) }
+          commands = commands_for(state, context: "generate").select { |cmd| cmd.applicable?(state) }
           break if commands.empty?
 
           command = commands[rng.rand(commands.length)]
@@ -100,6 +109,7 @@ module Pbt
 
         sequence.each_with_index do |step, index|
           command, args = unpack_step(step)
+          validate_command_protocol!(command, context: "run step #{index}")
 
           unless command.applicable?(state)
             raise "invalid stateful sequence at step #{index}: #{command_name(command)}"
@@ -146,6 +156,33 @@ module Pbt
       # @return [String]
       def command_name(command)
         command.respond_to?(:name) ? command.name.to_s : (command.class.name || command.class.inspect)
+      end
+
+      # @param state [Object]
+      # @param context [String]
+      # @return [Array<Object>]
+      def commands_for(state, context:)
+        commands = @model.commands(state)
+
+        unless commands.is_a?(Array)
+          raise Pbt::InvalidConfiguration,
+            "Pbt.stateful model.commands(state) must return Array, got #{commands.class} (context=#{context})"
+        end
+
+        commands.each { |command| validate_command_protocol!(command, context:) }
+        commands
+      end
+
+      # @param command [Object]
+      # @param context [String]
+      # @return [void]
+      def validate_command_protocol!(command, context:)
+        missing_methods = REQUIRED_COMMAND_METHODS.reject { |method_name| command.respond_to?(method_name) }
+        return if missing_methods.empty?
+
+        raise Pbt::InvalidConfiguration,
+          "Pbt.stateful command protocol mismatch for #{command.class} " \
+          "(missing: #{missing_methods.join(", ")}, context=#{context})"
       end
 
       # @param sequence [Array<Hash, Step>]
