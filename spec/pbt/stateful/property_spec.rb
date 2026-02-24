@@ -48,7 +48,14 @@ RSpec.describe Pbt do
       property = Pbt.stateful(model: MissingProtocolCommandModel.new, sut: -> { Object.new }, max_steps: 1)
 
       expect { property.generate(Random.new(1)) }
-        .to raise_error(Pbt::InvalidConfiguration, /command protocol mismatch.*MissingProtocolCommand.*missing: run!, verify!/i)
+        .to raise_error(Pbt::InvalidConfiguration, /command protocol mismatch.*MissingProtocolCommand.*name=:broken.*missing: run!, verify!/i)
+    end
+
+    it "raises a clear error when command.arguments is not an arbitrary-like object" do
+      property = Pbt.stateful(model: InvalidArgumentsCommandModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(Random.new(1)) }
+        .to raise_error(Pbt::InvalidConfiguration, /command arguments protocol mismatch.*InvalidArgumentsCommand.*missing: generate, shrink.*context=generate/i)
     end
 
     it "detects postcondition failures on a buggy SUT" do
@@ -343,6 +350,46 @@ RSpec.describe Pbt do
 
     def next_state(state, _args)
       state
+    end
+  end
+
+  class InvalidArgumentsCommandModel
+    def initialize
+      @command = InvalidArgumentsCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class InvalidArgumentsCommand
+    def name
+      :bad_arguments
+    end
+
+    def arguments
+      :not_an_arbitrary
+    end
+
+    def applicable?(_state)
+      true
+    end
+
+    def next_state(state, _args)
+      state
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
     end
   end
   # standard:enable Lint/ConstantDefinitionInBlock

@@ -190,11 +190,32 @@ module Pbt
       # @return [void]
       def validate_command_protocol!(command, context:)
         missing_methods = REQUIRED_COMMAND_METHODS.reject { |method_name| command.respond_to?(method_name) }
+        unless missing_methods.empty?
+          raise Pbt::InvalidConfiguration,
+            "Pbt.stateful command protocol mismatch for #{command.class} " \
+            "(name=#{safe_command_label(command)}, missing: #{missing_methods.join(", ")}, context=#{context})"
+        end
+
+        validate_arguments_protocol!(command, context:)
+      end
+
+      # @param command [Object]
+      # @param context [String]
+      # @return [void]
+      def validate_arguments_protocol!(command, context:)
+        arguments = command.arguments
+        missing_methods = %i[generate shrink].reject { |method_name| arguments.respond_to?(method_name) }
         return if missing_methods.empty?
 
         raise Pbt::InvalidConfiguration,
-          "Pbt.stateful command protocol mismatch for #{command.class} " \
-          "(missing: #{missing_methods.join(", ")}, context=#{context})"
+          "Pbt.stateful command arguments protocol mismatch for #{command.class} " \
+          "(name=#{safe_command_label(command)}, missing: #{missing_methods.join(", ")}, context=#{context})"
+      end
+
+      # @param command [Object]
+      # @return [String]
+      def safe_command_label(command)
+        command.respond_to?(:name) ? command.name.inspect : "<unknown>"
       end
 
       # @param sequence [Array<Hash, Step>]
