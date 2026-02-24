@@ -34,8 +34,10 @@ module Pbt
       # @param sut [Proc]
       # @param max_steps [Integer]
       def initialize(model:, sut:, max_steps:)
-        raise ArgumentError, "sut must be callable" unless sut.respond_to?(:call)
-        raise ArgumentError, "max_steps must be non-negative" if max_steps.negative?
+        validate_model!(model)
+        raise Pbt::InvalidConfiguration, "sut must be callable" unless sut.respond_to?(:call)
+        raise Pbt::InvalidConfiguration, "max_steps must be an Integer" unless max_steps.is_a?(Integer)
+        raise Pbt::InvalidConfiguration, "max_steps must be non-negative" if max_steps.negative?
 
         @model = model
         @sut_factory = sut
@@ -156,6 +158,16 @@ module Pbt
       # @return [String]
       def command_name(command)
         command.respond_to?(:name) ? command.name.to_s : (command.class.name || command.class.inspect)
+      end
+
+      # @param model [Object]
+      # @return [void]
+      def validate_model!(model)
+        missing_methods = %i[initial_state commands].reject { |method_name| model.respond_to?(method_name) }
+        return if missing_methods.empty?
+
+        raise Pbt::InvalidConfiguration,
+          "Pbt.stateful model must respond to #{missing_methods.join(", ")}"
       end
 
       # @param state [Object]

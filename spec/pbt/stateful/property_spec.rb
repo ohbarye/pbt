@@ -12,6 +12,18 @@ RSpec.describe Pbt do
       expect(property).to respond_to(:run)
     end
 
+    it "raises a clear error when model does not implement required model protocol" do
+      expect {
+        Pbt.stateful(model: Object.new, sut: -> { Object.new }, max_steps: 1)
+      }.to raise_error(Pbt::InvalidConfiguration, /model must respond to initial_state, commands/i)
+    end
+
+    it "raises a clear error when max_steps is not an Integer" do
+      expect {
+        Pbt.stateful(model:, sut: -> { Object.new }, max_steps: "10")
+      }.to raise_error(Pbt::InvalidConfiguration, /max_steps must be an Integer/i)
+    end
+
     it "formats stateful steps with a readable inspect representation" do
       step = Pbt::Stateful::Property::Step.new(command: model.push_command, args: 1)
 
