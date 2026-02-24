@@ -80,6 +80,7 @@ module Pbt
 
           sequence.each_with_index do |step, index|
             command, args = unpack_step(step)
+            validate_command_protocol!(command, context: "shrink step #{index}")
 
             command.arguments.shrink(args).each do |shrunk_args|
               candidate = replace_step(sequence, index, command:, args: shrunk_args)

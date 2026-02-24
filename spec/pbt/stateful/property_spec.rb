@@ -24,6 +24,18 @@ RSpec.describe Pbt do
       }.to raise_error(Pbt::InvalidConfiguration, /max_steps must be an Integer/i)
     end
 
+    it "raises a clear error when sut is not callable" do
+      expect {
+        Pbt.stateful(model:, sut: Object.new, max_steps: 1)
+      }.to raise_error(Pbt::InvalidConfiguration, /sut must be callable/i)
+    end
+
+    it "raises a clear error when max_steps is negative" do
+      expect {
+        Pbt.stateful(model:, sut: -> { Object.new }, max_steps: -1)
+      }.to raise_error(Pbt::InvalidConfiguration, /max_steps must be non-negative/i)
+    end
+
     it "formats stateful steps with a readable inspect representation" do
       step = Pbt::Stateful::Property::Step.new(command: model.push_command, args: 1)
 
@@ -56,6 +68,22 @@ RSpec.describe Pbt do
 
       expect { property.generate(Random.new(1)) }
         .to raise_error(Pbt::InvalidConfiguration, /command arguments protocol mismatch.*InvalidArgumentsCommand.*missing: generate, shrink.*context=generate/i)
+    end
+
+    it "raises a clear error for command protocol mismatch in manual sequences during run" do
+      property = Pbt.stateful(model:, sut: -> { Object.new }, max_steps: 1)
+      sequence = [{command: MissingProtocolCommand.new, args: nil}]
+
+      expect { property.run(sequence) }
+        .to raise_error(Pbt::InvalidConfiguration, /command protocol mismatch.*MissingProtocolCommand.*name=:broken.*context=run step 0/i)
+    end
+
+    it "raises a clear error for invalid command arguments protocol during shrink" do
+      property = Pbt.stateful(model:, sut: -> { Object.new }, max_steps: 1)
+      sequence = [{command: InvalidArgumentsCommand.new, args: nil}]
+
+      expect { property.shrink(sequence).to_a }
+        .to raise_error(Pbt::InvalidConfiguration, /command arguments protocol mismatch.*InvalidArgumentsCommand.*context=shrink step 0/i)
     end
 
     it "detects postcondition failures on a buggy SUT" do
