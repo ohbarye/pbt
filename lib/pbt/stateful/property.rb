@@ -5,6 +5,15 @@ module Pbt
     # Property-compatible wrapper for command-based stateful testing.
     # It provides `generate`, `shrink` and `run`, so existing runners can execute it.
     class Property
+      REQUIRED_COMMAND_METHODS = %i[
+        name
+        arguments
+        applicable?
+        next_state
+        run!
+        verify!
+      ].freeze
+
       Step = Struct.new(:command, :args, keyword_init: true) do
         def inspect
           "#<Pbt::Stateful::Step command=#{command_label}, args=#{args.inspect}>"
@@ -25,8 +34,10 @@ module Pbt
       # @param sut [Proc]
       # @param max_steps [Integer]
       def initialize(model:, sut:, max_steps:)
-        raise ArgumentError, "sut must be callable" unless sut.respond_to?(:call)
-        raise ArgumentError, "max_steps must be non-negative" if max_steps.negative?
+        validate_model!(model)
+        raise Pbt::InvalidConfiguration, "sut must be callable" unless sut.respond_to?(:call)
+        raise Pbt::InvalidConfiguration, "max_steps must be an Integer" unless max_steps.is_a?(Integer)
+        raise Pbt::InvalidConfiguration, "max_steps must be non-negative" if max_steps.negative?
 
         @model = model
         @sut_factory = sut
@@ -43,7 +54,7 @@ module Pbt
         sequence = []
 
         length.times do
-          commands = @model.commands(state).select { |cmd| cmd.applicable?(state) }
+          commands = commands_for(state, context: "generate").select { |cmd| cmd.applicable?(state) }
           break if commands.empty?
 
           command = commands[rng.rand(commands.length)]
@@ -69,6 +80,7 @@ module Pbt
 
           sequence.each_with_index do |step, index|
             command, args = unpack_step(step)
+            validate_command_protocol!(command, context: "shrink step #{index}")
 
             command.arguments.shrink(args).each do |shrunk_args|
               candidate = replace_step(sequence, index, command:, args: shrunk_args)
@@ -100,6 +112,7 @@ module Pbt
 
         sequence.each_with_index do |step, index|
           command, args = unpack_step(step)
+          validate_command_protocol!(command, context: "run step #{index}")
 
           unless command.applicable?(state)
             raise "invalid stateful sequence at step #{index}: #{command_name(command)}"
@@ -146,6 +159,64 @@ module Pbt
       # @return [String]
       def command_name(command)
         command.respond_to?(:name) ? command.name.to_s : (command.class.name || command.class.inspect)
+      end
+
+      # @param model [Object]
+      # @return [void]
+      def validate_model!(model)
+        missing_methods = %i[initial_state commands].reject { |method_name| model.respond_to?(method_name) }
+        return if missing_methods.empty?
+
+        raise Pbt::InvalidConfiguration,
+          "Pbt.stateful model must respond to #{missing_methods.join(", ")}"
+      end
+
+      # @param state [Object]
+      # @param context [String]
+      # @return [Array<Object>]
+      def commands_for(state, context:)
+        commands = @model.commands(state)
+
+        unless commands.is_a?(Array)
+          raise Pbt::InvalidConfiguration,
+            "Pbt.stateful model.commands(state) must return Array, got #{commands.class} (context=#{context})"
+        end
+
+        commands.each { |command| validate_command_protocol!(command, context:) }
+        commands
+      end
+
+      # @param command [Object]
+      # @param context [String]
+      # @return [void]
+      def validate_command_protocol!(command, context:)
+        missing_methods = REQUIRED_COMMAND_METHODS.reject { |method_name| command.respond_to?(method_name) }
+        unless missing_methods.empty?
+          raise Pbt::InvalidConfiguration,
+            "Pbt.stateful command protocol mismatch for #{command.class} " \
+            "(name=#{safe_command_label(command)}, missing: #{missing_methods.join(", ")}, context=#{context})"
+        end
+
+        validate_arguments_protocol!(command, context:)
+      end
+
+      # @param command [Object]
+      # @param context [String]
+      # @return [void]
+      def validate_arguments_protocol!(command, context:)
+        arguments = command.arguments
+        missing_methods = %i[generate shrink].reject { |method_name| arguments.respond_to?(method_name) }
+        return if missing_methods.empty?
+
+        raise Pbt::InvalidConfiguration,
+          "Pbt.stateful command arguments protocol mismatch for #{command.class} " \
+          "(name=#{safe_command_label(command)}, missing: #{missing_methods.join(", ")}, context=#{context})"
+      end
+
+      # @param command [Object]
+      # @return [String]
+      def safe_command_label(command)
+        command.respond_to?(:name) ? command.name.inspect : "<unknown>"
       end
 
       # @param sequence [Array<Hash, Step>]

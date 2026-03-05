@@ -12,6 +12,30 @@ RSpec.describe Pbt do
       expect(property).to respond_to(:run)
     end
 
+    it "raises a clear error when model does not implement required model protocol" do
+      expect {
+        Pbt.stateful(model: Object.new, sut: -> { Object.new }, max_steps: 1)
+      }.to raise_error(Pbt::InvalidConfiguration, /model must respond to initial_state, commands/i)
+    end
+
+    it "raises a clear error when max_steps is not an Integer" do
+      expect {
+        Pbt.stateful(model:, sut: -> { Object.new }, max_steps: "10")
+      }.to raise_error(Pbt::InvalidConfiguration, /max_steps must be an Integer/i)
+    end
+
+    it "raises a clear error when sut is not callable" do
+      expect {
+        Pbt.stateful(model:, sut: Object.new, max_steps: 1)
+      }.to raise_error(Pbt::InvalidConfiguration, /sut must be callable/i)
+    end
+
+    it "raises a clear error when max_steps is negative" do
+      expect {
+        Pbt.stateful(model:, sut: -> { Object.new }, max_steps: -1)
+      }.to raise_error(Pbt::InvalidConfiguration, /max_steps must be non-negative/i)
+    end
+
     it "formats stateful steps with a readable inspect representation" do
       step = Pbt::Stateful::Property::Step.new(command: model.push_command, args: 1)
 
@@ -23,6 +47,43 @@ RSpec.describe Pbt do
       sequence = property.generate(Random.new(1234))
 
       expect { property.run(sequence) }.not_to raise_error
+    end
+
+    it "raises a clear error when model.commands(state) does not return an Array" do
+      property = Pbt.stateful(model: NonArrayCommandsModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(Random.new(1)) }
+        .to raise_error(Pbt::InvalidConfiguration, /model\.commands\(state\) must return Array.*got Hash.*context=generate/i)
+    end
+
+    it "raises a clear error listing missing command protocol methods" do
+      property = Pbt.stateful(model: MissingProtocolCommandModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(Random.new(1)) }
+        .to raise_error(Pbt::InvalidConfiguration, /command protocol mismatch.*MissingProtocolCommand.*name=:broken.*missing: run!, verify!/i)
+    end
+
+    it "raises a clear error when command.arguments is not an arbitrary-like object" do
+      property = Pbt.stateful(model: InvalidArgumentsCommandModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(Random.new(1)) }
+        .to raise_error(Pbt::InvalidConfiguration, /command arguments protocol mismatch.*InvalidArgumentsCommand.*missing: generate, shrink.*context=generate/i)
+    end
+
+    it "raises a clear error for command protocol mismatch in manual sequences during run" do
+      property = Pbt.stateful(model:, sut: -> { Object.new }, max_steps: 1)
+      sequence = [{command: MissingProtocolCommand.new, args: nil}]
+
+      expect { property.run(sequence) }
+        .to raise_error(Pbt::InvalidConfiguration, /command protocol mismatch.*MissingProtocolCommand.*name=:broken.*context=run step 0/i)
+    end
+
+    it "raises a clear error for invalid command arguments protocol during shrink" do
+      property = Pbt.stateful(model:, sut: -> { Object.new }, max_steps: 1)
+      sequence = [{command: InvalidArgumentsCommand.new, args: nil}]
+
+      expect { property.shrink(sequence).to_a }
+        .to raise_error(Pbt::InvalidConfiguration, /command arguments protocol mismatch.*InvalidArgumentsCommand.*context=shrink step 0/i)
     end
 
     it "detects postcondition failures on a buggy SUT" do
@@ -275,6 +336,88 @@ RSpec.describe Pbt do
         y << 1
         y << 0
       end
+    end
+  end
+
+  class NonArrayCommandsModel
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      {oops: :not_an_array}
+    end
+  end
+
+  class MissingProtocolCommandModel
+    def initialize
+      @command = MissingProtocolCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class MissingProtocolCommand
+    def name
+      :broken
+    end
+
+    def arguments
+      Pbt.nil
+    end
+
+    def applicable?(_state)
+      true
+    end
+
+    def next_state(state, _args)
+      state
+    end
+  end
+
+  class InvalidArgumentsCommandModel
+    def initialize
+      @command = InvalidArgumentsCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class InvalidArgumentsCommand
+    def name
+      :bad_arguments
+    end
+
+    def arguments
+      :not_an_arbitrary
+    end
+
+    def applicable?(_state)
+      true
+    end
+
+    def next_state(state, _args)
+      state
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
     end
   end
   # standard:enable Lint/ConstantDefinitionInBlock
