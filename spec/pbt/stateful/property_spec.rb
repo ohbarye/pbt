@@ -71,6 +71,21 @@ RSpec.describe Pbt do
       expect { property.run(sequence) }.not_to raise_error
     end
 
+    it "retries arg generation for arg-aware commands before dropping the command" do
+      model = RetriableArgAwareModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
+      sequence = property.generate(SequencedRng.new(
+        range_values: {
+          [0, 1] => [1],
+          [1, 3] => [3, 2]
+        }
+      ))
+
+      expect(sequence).to eq([
+        Pbt::Stateful::Property::Step.new(command: model.command, args: 2)
+      ])
+    end
+
     it "supports commands that use both arguments(state) and applicable?(state, args)" do
       model = StrictWithdrawModel.new
       property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
@@ -105,6 +120,20 @@ RSpec.describe Pbt do
 
     it "raises a clear error when applicable? has an unsupported signature" do
       property = Pbt.stateful(model: InvalidApplicableSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(Pbt::InvalidConfiguration, /invalid applicable\? signature; expected applicable\?\(state\) or applicable\?\(state, args\)/i)
+    end
+
+    it "rejects keyword-only arguments signatures during validation" do
+      property = Pbt.stateful(model: KeywordArgumentsSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(Pbt::InvalidConfiguration, /invalid arguments signature; expected arguments or arguments\(state\)/i)
+    end
+
+    it "rejects keyword-only applicable? signatures during validation" do
+      property = Pbt.stateful(model: KeywordApplicableSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
 
       expect { property.generate(DeterministicRng.new) }
         .to raise_error(Pbt::InvalidConfiguration, /invalid applicable\? signature; expected applicable\?\(state\) or applicable\?\(state, args\)/i)
@@ -411,6 +440,27 @@ RSpec.describe Pbt do
     end
   end
 
+  class SequencedRng
+    def initialize(range_values: {})
+      @range_values = range_values.transform_values(&:dup)
+    end
+
+    def rand(value)
+      case value
+      when Range
+        key = [value.begin, value.end]
+        queue = @range_values[key]
+        return value.end if queue.nil? || queue.empty?
+
+        queue.shift
+      when Integer
+        0
+      else
+        raise "unsupported rand argument: #{value.inspect}"
+      end
+    end
+  end
+
   class BankAccount
     attr_reader :balance
 
@@ -504,6 +554,48 @@ RSpec.describe Pbt do
 
     def verify!(after_state:, sut:, **)
       raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
+  class RetriableArgAwareModel
+    attr_reader :command
+
+    def initialize
+      @command = RetriableArgAwareCommand.new
+    end
+
+    def initial_state
+      3
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class RetriableArgAwareCommand
+    def name
+      :retry_withdraw
+    end
+
+    def arguments
+      Pbt.integer(min: 1, max: 3)
+    end
+
+    def applicable?(state, args)
+      args.even? && args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
     end
   end
 
@@ -656,6 +748,86 @@ RSpec.describe Pbt do
 
     def applicable?(_state, _args, _extra)
       true
+    end
+
+    def next_state(state, _args)
+      state
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class KeywordArgumentsSignatureModel
+    def initialize
+      @command = KeywordArgumentsSignatureCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class KeywordArgumentsSignatureCommand
+    def name
+      :keyword_arguments
+    end
+
+    def arguments(state:)
+      Pbt.constant(state)
+    end
+
+    def applicable?(_state)
+      true
+    end
+
+    def next_state(state, _args)
+      state
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class KeywordApplicableSignatureModel
+    def initialize
+      @command = KeywordApplicableSignatureCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class KeywordApplicableSignatureCommand
+    def name
+      :keyword_applicable
+    end
+
+    def arguments
+      Pbt.nil
+    end
+
+    def applicable?(_state, args:)
+      args.nil?
     end
 
     def next_state(state, _args)

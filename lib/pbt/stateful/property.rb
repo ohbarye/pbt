@@ -5,6 +5,8 @@ module Pbt
     # Property-compatible wrapper for command-based stateful testing.
     # It provides `generate`, `shrink` and `run`, so existing runners can execute it.
     class Property
+      ARG_AWARE_GENERATION_ATTEMPTS = 5
+
       REQUIRED_COMMAND_METHODS = %i[
         name
         arguments
@@ -233,11 +235,28 @@ module Pbt
       # @return [Array<Array<Object, Object>>]
       def generate_candidates_for(state, rng, context:)
         commands_for(state, context:).filter_map do |command|
-          args = arguments_for(command, state, context:).generate(rng)
-          next unless applicable?(command, state, args, context:)
+          args = generate_applicable_args(command, state, rng, context:)
+          next if args.equal?(NoApplicableArgs)
 
           [command, args]
         end
+      end
+
+      # @param command [Object]
+      # @param state [Object]
+      # @param rng [Random]
+      # @param context [String]
+      # @return [Object]
+      def generate_applicable_args(command, state, rng, context:)
+        arbitrary = arguments_for(command, state, context:)
+        attempts = arg_aware_command?(command) ? ARG_AWARE_GENERATION_ATTEMPTS : 1
+
+        attempts.times do
+          args = arbitrary.generate(rng)
+          return args if applicable?(command, state, args, context:)
+        end
+
+        NoApplicableArgs
       end
 
       # @param command [Object]
@@ -274,6 +293,12 @@ module Pbt
       end
 
       # @param command [Object]
+      # @return [Boolean]
+      def arg_aware_command?(command)
+        supports_argument_count?(command.method(:applicable?), 2)
+      end
+
+      # @param command [Object]
       # @param method_name [Symbol]
       # @param valid_counts [Array<Integer>]
       # @param expectation [String]
@@ -301,6 +326,8 @@ module Pbt
       # @param count [Integer]
       # @return [Boolean]
       def supports_argument_count?(method, count)
+        return false if method.parameters.any? { |kind, _name| keyword_parameter?(kind) }
+
         required = 0
         optional = 0
         rest = false
@@ -320,6 +347,12 @@ module Pbt
         return true if rest
 
         count <= required + optional
+      end
+
+      # @param kind [Symbol]
+      # @return [Boolean]
+      def keyword_parameter?(kind)
+        %i[keyreq key keyrest].include?(kind)
       end
 
       # @param sequence [Array<Hash, Step>]
@@ -375,6 +408,9 @@ module Pbt
         seen[candidate] = true
         y << candidate
       end
+
+      NoApplicableArgs = Object.new
+      private_constant :NoApplicableArgs
     end
   end
 end
