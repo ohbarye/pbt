@@ -54,11 +54,10 @@ module Pbt
         sequence = []
 
         length.times do
-          commands = commands_for(state, context: "generate").select { |cmd| cmd.applicable?(state) }
-          break if commands.empty?
+          candidates = generate_candidates_for(state, rng, context: "generate")
+          break if candidates.empty?
 
-          command = commands[rng.rand(commands.length)]
-          args = command.arguments.generate(rng)
+          command, args = candidates[rng.rand(candidates.length)]
           sequence << Step.new(command:, args:)
           state = command.next_state(state, args)
         end
@@ -73,6 +72,7 @@ module Pbt
       def shrink(sequence)
         Enumerator.new do |y|
           seen = {}
+          state = @model.initial_state
 
           (sequence.length - 1).downto(0) do |length|
             yield_shrink_candidate(y, seen, sequence.first(length))
@@ -80,14 +80,16 @@ module Pbt
 
           sequence.each_with_index do |step, index|
             command, args = unpack_step(step)
-            validate_command_protocol!(command, context: "shrink step #{index}")
+            validate_command_protocol!(command, state:, context: "shrink step #{index}")
 
-            command.arguments.shrink(args).each do |shrunk_args|
+            arguments_for(command, state, context: "shrink step #{index}").shrink(args).each do |shrunk_args|
               candidate = replace_step(sequence, index, command:, args: shrunk_args)
               next unless valid_sequence?(candidate)
 
               yield_shrink_candidate(y, seen, candidate)
             end
+
+            state = command.next_state(state, args)
           end
         end
       end
@@ -112,9 +114,9 @@ module Pbt
 
         sequence.each_with_index do |step, index|
           command, args = unpack_step(step)
-          validate_command_protocol!(command, context: "run step #{index}")
+          validate_command_protocol!(command, state:, context: "run step #{index}")
 
-          unless command.applicable?(state)
+          unless applicable?(command, state, args, context: "run step #{index}")
             raise "invalid stateful sequence at step #{index}: #{command_name(command)}"
           end
 
@@ -182,14 +184,15 @@ module Pbt
             "Pbt.stateful model.commands(state) must return Array, got #{commands.class} (context=#{context})"
         end
 
-        commands.each { |command| validate_command_protocol!(command, context:) }
+        commands.each { |command| validate_command_protocol!(command, state:, context:) }
         commands
       end
 
       # @param command [Object]
+      # @param state [Object]
       # @param context [String]
       # @return [void]
-      def validate_command_protocol!(command, context:)
+      def validate_command_protocol!(command, state:, context:)
         missing_methods = REQUIRED_COMMAND_METHODS.reject { |method_name| command.respond_to?(method_name) }
         unless missing_methods.empty?
           raise Pbt::InvalidConfiguration,
@@ -197,14 +200,19 @@ module Pbt
             "(name=#{safe_command_label(command)}, missing: #{missing_methods.join(", ")}, context=#{context})"
         end
 
-        validate_arguments_protocol!(command, context:)
+        validate_command_signature!(command, :arguments, valid_counts: [0, 1], expectation: "arguments or arguments(state)",
+          context:)
+        validate_command_signature!(command, :applicable?, valid_counts: [1, 2],
+          expectation: "applicable?(state) or applicable?(state, args)", context:)
+        validate_arguments_protocol!(command, state, context:)
       end
 
       # @param command [Object]
+      # @param state [Object]
       # @param context [String]
       # @return [void]
-      def validate_arguments_protocol!(command, context:)
-        arguments = command.arguments
+      def validate_arguments_protocol!(command, state, context:)
+        arguments = arguments_for(command, state, context:)
         missing_methods = %i[generate shrink].reject { |method_name| arguments.respond_to?(method_name) }
         return if missing_methods.empty?
 
@@ -217,6 +225,101 @@ module Pbt
       # @return [String]
       def safe_command_label(command)
         command.respond_to?(:name) ? command.name.inspect : "<unknown>"
+      end
+
+      # @param state [Object]
+      # @param rng [Random]
+      # @param context [String]
+      # @return [Array<Array<Object, Object>>]
+      def generate_candidates_for(state, rng, context:)
+        commands_for(state, context:).filter_map do |command|
+          args = arguments_for(command, state, context:).generate(rng)
+          next unless applicable?(command, state, args, context:)
+
+          [command, args]
+        end
+      end
+
+      # @param command [Object]
+      # @param state [Object]
+      # @param context [String]
+      # @return [Object]
+      def arguments_for(command, state, context:)
+        method = command.method(:arguments)
+
+        if supports_argument_count?(method, 1)
+          command.arguments(state)
+        elsif supports_argument_count?(method, 0)
+          command.arguments
+        else
+          raise_invalid_signature!(command, :arguments, "arguments or arguments(state)", context)
+        end
+      end
+
+      # @param command [Object]
+      # @param state [Object]
+      # @param args [Object]
+      # @param context [String]
+      # @return [Boolean]
+      def applicable?(command, state, args, context:)
+        method = command.method(:applicable?)
+
+        if supports_argument_count?(method, 2)
+          command.applicable?(state, args)
+        elsif supports_argument_count?(method, 1)
+          command.applicable?(state)
+        else
+          raise_invalid_signature!(command, :applicable?, "applicable?(state) or applicable?(state, args)", context)
+        end
+      end
+
+      # @param command [Object]
+      # @param method_name [Symbol]
+      # @param valid_counts [Array<Integer>]
+      # @param expectation [String]
+      # @param context [String]
+      # @return [void]
+      def validate_command_signature!(command, method_name, valid_counts:, expectation:, context:)
+        method = command.method(method_name)
+        return if valid_counts.any? { |count| supports_argument_count?(method, count) }
+
+        raise_invalid_signature!(command, method_name, expectation, context)
+      end
+
+      # @param command [Object]
+      # @param method_name [Symbol]
+      # @param expectation [String]
+      # @param context [String]
+      # @return [void]
+      def raise_invalid_signature!(command, method_name, expectation, context)
+        raise Pbt::InvalidConfiguration,
+          "Pbt.stateful command protocol mismatch for #{command.class} " \
+          "(name=#{safe_command_label(command)}, invalid #{method_name} signature; expected #{expectation}, context=#{context})"
+      end
+
+      # @param method [Method]
+      # @param count [Integer]
+      # @return [Boolean]
+      def supports_argument_count?(method, count)
+        required = 0
+        optional = 0
+        rest = false
+
+        method.parameters.each do |kind, _name|
+          case kind
+          when :req
+            required += 1
+          when :opt
+            optional += 1
+          when :rest
+            rest = true
+          end
+        end
+
+        return false if count < required
+        return true if rest
+
+        count <= required + optional
       end
 
       # @param sequence [Array<Hash, Step>]
@@ -252,7 +355,7 @@ module Pbt
 
         sequence.each do |step|
           command, args = unpack_step(step)
-          return false unless command.applicable?(state)
+          return false unless applicable?(command, state, args, context: "validate sequence")
 
           state = command.next_state(state, args)
         end
