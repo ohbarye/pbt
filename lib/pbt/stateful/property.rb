@@ -83,8 +83,9 @@ module Pbt
           sequence.each_with_index do |step, index|
             command, args = unpack_step(step)
             validate_command_protocol!(command, state:, context: "shrink step #{index}")
+            break unless applicable?(command, state, args, context: "shrink step #{index}")
 
-            arguments_for(command, state, context: "shrink step #{index}").shrink(args).each do |shrunk_args|
+            arbitrary_for(command, state, context: "shrink step #{index}").shrink(args).each do |shrunk_args|
               candidate = replace_step(sequence, index, command:, args: shrunk_args)
               next unless valid_sequence?(candidate)
 
@@ -206,15 +207,13 @@ module Pbt
           context:)
         validate_command_signature!(command, :applicable?, valid_counts: [1, 2],
           expectation: "applicable?(state) or applicable?(state, args)", context:)
-        validate_arguments_protocol!(command, state, context:)
       end
 
       # @param command [Object]
-      # @param state [Object]
+      # @param arguments [Object]
       # @param context [String]
       # @return [void]
-      def validate_arguments_protocol!(command, state, context:)
-        arguments = arguments_for(command, state, context:)
+      def validate_arguments_protocol!(command, arguments, context:)
         missing_methods = %i[generate shrink].reject { |method_name| arguments.respond_to?(method_name) }
         return if missing_methods.empty?
 
@@ -248,10 +247,15 @@ module Pbt
       # @param context [String]
       # @return [Object]
       def generate_applicable_args(command, state, rng, context:)
-        arbitrary = arguments_for(command, state, context:)
-        attempts = arg_aware_command?(command) ? ARG_AWARE_GENERATION_ATTEMPTS : 1
+        unless arg_aware_command?(command)
+          return NoApplicableArgs unless applicable?(command, state, nil, context:)
 
-        attempts.times do
+          return arbitrary_for(command, state, context:).generate(rng)
+        end
+
+        arbitrary = arbitrary_for(command, state, context:)
+
+        ARG_AWARE_GENERATION_ATTEMPTS.times do
           args = arbitrary.generate(rng)
           return args if applicable?(command, state, args, context:)
         end
@@ -273,6 +277,16 @@ module Pbt
         else
           raise_invalid_signature!(command, :arguments, "arguments or arguments(state)", context)
         end
+      end
+
+      # @param command [Object]
+      # @param state [Object]
+      # @param context [String]
+      # @return [Object]
+      def arbitrary_for(command, state, context:)
+        arguments = arguments_for(command, state, context:)
+        validate_arguments_protocol!(command, arguments, context:)
+        arguments
       end
 
       # @param command [Object]

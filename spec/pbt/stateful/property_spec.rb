@@ -60,6 +60,23 @@ RSpec.describe Pbt do
       expect { property.run(sequence) }.not_to raise_error
     end
 
+    it "skips state-dependent arguments when a state-only applicable? command is inapplicable during generate" do
+      model = ZeroBalanceWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }.not_to raise_error
+      expect(property.generate(DeterministicRng.new)).to eq([])
+    end
+
+    it "raises invalid sequence without materializing state-dependent arguments during run" do
+      model = ZeroBalanceWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
+      sequence = [{command: model.command, args: 1}]
+
+      expect { property.run(sequence) }
+        .to raise_error(RuntimeError, /invalid stateful sequence at step 0: withdraw/)
+    end
+
     it "supports arg-aware applicability via applicable?(state, args)" do
       model = ArgAwareWithdrawModel.new
       property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
@@ -227,6 +244,16 @@ RSpec.describe Pbt do
         [],
         [{command: model.command, args: 2}],
         [{command: model.command, args: 1}]
+      ])
+    end
+
+    it "does not materialize state-dependent arguments for inapplicable steps during shrink" do
+      model = ZeroBalanceWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
+      sequence = [{command: model.command, args: 1}]
+
+      expect(property.shrink(sequence).to_a).to eq([
+        []
       ])
     end
 
@@ -495,6 +522,50 @@ RSpec.describe Pbt do
     end
 
     def arguments(state)
+      Pbt.integer(min: 1, max: state)
+    end
+
+    def applicable?(state)
+      state.positive?
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(sut, args)
+      sut.withdraw(args)
+    end
+
+    def verify!(after_state:, sut:, **)
+      raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
+  class ZeroBalanceWithdrawModel
+    attr_reader :command
+
+    def initialize
+      @command = NonTotalStateArgumentsWithdrawCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class NonTotalStateArgumentsWithdrawCommand
+    def name
+      :withdraw
+    end
+
+    def arguments(state)
+      raise "balance must be positive" unless state.positive?
+
       Pbt.integer(min: 1, max: state)
     end
 
