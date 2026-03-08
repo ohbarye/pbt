@@ -88,6 +88,14 @@ RSpec.describe Pbt do
       expect { property.run(sequence) }.not_to raise_error
     end
 
+    it "skips non-total state-dependent arguments for arg-aware commands when no args can apply" do
+      model = ZeroBalanceArgAwareWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }.not_to raise_error
+      expect(property.generate(DeterministicRng.new)).to eq([])
+    end
+
     it "retries arg generation for arg-aware commands before dropping the command" do
       model = RetriableArgAwareModel.new
       property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
@@ -613,6 +621,50 @@ RSpec.describe Pbt do
 
     def applicable?(state, args)
       args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(sut, args)
+      sut.withdraw(args)
+    end
+
+    def verify!(after_state:, sut:, **)
+      raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
+  class ZeroBalanceArgAwareWithdrawModel
+    attr_reader :command
+
+    def initialize
+      @command = NonTotalArgAwareWithdrawCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class NonTotalArgAwareWithdrawCommand
+    def name
+      :withdraw
+    end
+
+    def arguments(state)
+      raise "balance must be positive" unless state.positive?
+
+      Pbt.integer(min: 1, max: state)
+    end
+
+    def applicable?(state, args)
+      args.positive? && args <= state
     end
 
     def next_state(state, args)

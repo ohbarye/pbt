@@ -253,10 +253,13 @@ module Pbt
           return arbitrary_for(command, state, context:).generate(rng)
         end
 
-        arbitrary = arbitrary_for(command, state, context:)
+        arbitrary = arbitrary_for_generate(command, state, context:)
+        return NoApplicableArgs if arbitrary.equal?(NoApplicableArgs)
 
         ARG_AWARE_GENERATION_ATTEMPTS.times do
-          args = arbitrary.generate(rng)
+          args = generate_args_for(command, arbitrary, rng)
+          return NoApplicableArgs if args.equal?(NoApplicableArgs)
+
           return args if applicable?(command, state, args, context:)
         end
 
@@ -291,6 +294,35 @@ module Pbt
 
       # @param command [Object]
       # @param state [Object]
+      # @param context [String]
+      # @return [Object]
+      def arbitrary_for_generate(command, state, context:)
+        arbitrary_for(command, state, context:)
+      rescue StandardError => e
+        raise if e.is_a?(Pbt::InvalidConfiguration)
+        raise unless state_aware_arg_aware_command?(command)
+
+        # For state-aware arg-aware commands, materialization failure means the
+        # current state has no representable argument candidates, so skip it.
+        NoApplicableArgs
+      end
+
+      # @param command [Object]
+      # @param arbitrary [Object]
+      # @param rng [Random]
+      # @return [Object]
+      def generate_args_for(command, arbitrary, rng)
+        arbitrary.generate(rng)
+      rescue StandardError => e
+        raise if e.is_a?(Pbt::InvalidConfiguration)
+        raise unless state_aware_arg_aware_command?(command)
+
+        # Treat generation failure the same way as materialization failure above.
+        NoApplicableArgs
+      end
+
+      # @param command [Object]
+      # @param state [Object]
       # @param args [Object]
       # @param context [String]
       # @return [Boolean]
@@ -310,6 +342,12 @@ module Pbt
       # @return [Boolean]
       def arg_aware_command?(command)
         supports_argument_count?(command.method(:applicable?), 2)
+      end
+
+      # @param command [Object]
+      # @return [Boolean]
+      def state_aware_arg_aware_command?(command)
+        arg_aware_command?(command) && supports_argument_count?(command.method(:arguments), 1)
       end
 
       # @param command [Object]
