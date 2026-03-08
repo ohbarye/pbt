@@ -253,8 +253,7 @@ module Pbt
           return arbitrary_for(command, state, context:).generate(rng)
         end
 
-        arbitrary = arbitrary_for_generate(command, state, context:)
-        return NoApplicableArgs if arbitrary.equal?(NoApplicableArgs)
+        arbitrary = arbitrary_for(command, state, context:)
 
         ARG_AWARE_GENERATION_ATTEMPTS.times do
           args = generate_args_for(command, arbitrary, rng)
@@ -293,31 +292,14 @@ module Pbt
       end
 
       # @param command [Object]
-      # @param state [Object]
-      # @param context [String]
-      # @return [Object]
-      def arbitrary_for_generate(command, state, context:)
-        arbitrary_for(command, state, context:)
-      rescue StandardError => e
-        raise if e.is_a?(Pbt::InvalidConfiguration)
-        raise unless state_aware_arg_aware_command?(command)
-
-        # For state-aware arg-aware commands, materialization failure means the
-        # current state has no representable argument candidates, so skip it.
-        NoApplicableArgs
-      end
-
-      # @param command [Object]
       # @param arbitrary [Object]
       # @param rng [Random]
       # @return [Object]
       def generate_args_for(command, arbitrary, rng)
         arbitrary.generate(rng)
-      rescue StandardError => e
-        raise if e.is_a?(Pbt::InvalidConfiguration)
+      rescue Pbt::Arbitrary::EmptyDomainError
         raise unless state_aware_arg_aware_command?(command)
 
-        # Treat generation failure the same way as materialization failure above.
         NoApplicableArgs
       end
 

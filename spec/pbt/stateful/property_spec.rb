@@ -96,6 +96,22 @@ RSpec.describe Pbt do
       expect(property.generate(DeterministicRng.new)).to eq([])
     end
 
+    it "does not swallow implementation bugs in state-dependent arguments for arg-aware commands" do
+      model = BrokenStateArgumentsModel.new
+      property = Pbt.stateful(model:, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(NoMethodError)
+    end
+
+    it "does not swallow arbitrary generation bugs for arg-aware commands" do
+      model = BrokenGenerateArgAwareModel.new
+      property = Pbt.stateful(model:, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(RuntimeError, /boom/)
+    end
+
     it "retries arg generation for arg-aware commands before dropping the command" do
       model = RetriableArgAwareModel.new
       property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
@@ -640,7 +656,7 @@ RSpec.describe Pbt do
     attr_reader :command
 
     def initialize
-      @command = NonTotalArgAwareWithdrawCommand.new
+      @command = EmptyDomainArgAwareWithdrawCommand.new
     end
 
     def initial_state
@@ -652,14 +668,12 @@ RSpec.describe Pbt do
     end
   end
 
-  class NonTotalArgAwareWithdrawCommand
+  class EmptyDomainArgAwareWithdrawCommand
     def name
       :withdraw
     end
 
     def arguments(state)
-      raise "balance must be positive" unless state.positive?
-
       Pbt.integer(min: 1, max: state)
     end
 
@@ -677,6 +691,100 @@ RSpec.describe Pbt do
 
     def verify!(after_state:, sut:, **)
       raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
+  class BrokenStateArgumentsModel
+    attr_reader :command
+
+    def initialize
+      @command = BrokenStateArgumentsCommand.new
+    end
+
+    def initial_state
+      1
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class BrokenStateArgumentsCommand
+    def name
+      :broken_arguments
+    end
+
+    def arguments(_state)
+      nil.foo
+    end
+
+    def applicable?(state, args)
+      args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class BrokenGenerateArgAwareModel
+    attr_reader :command
+
+    def initialize
+      @command = BrokenGenerateArgAwareCommand.new
+    end
+
+    def initial_state
+      1
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class BrokenGenerateArgAwareCommand
+    def name
+      :broken_generate
+    end
+
+    def arguments(_state)
+      BrokenGenerateArbitrary.new
+    end
+
+    def applicable?(state, args)
+      args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class BrokenGenerateArbitrary < Pbt::Arbitrary::Arbitrary
+    def generate(_rng)
+      raise "boom"
+    end
+
+    def shrink(_current)
+      Enumerator.new {}
     end
   end
 

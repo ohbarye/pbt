@@ -2,6 +2,8 @@
 
 module Pbt
   module Arbitrary
+    class EmptyDomainError < ArgumentError; end
+
     # Abstract class for generating random values on type `T`.
     #
     # @abstract
