@@ -49,6 +49,95 @@ RSpec.describe Pbt do
       expect { property.run(sequence) }.not_to raise_error
     end
 
+    it "supports state-dependent command arguments via arguments(state)" do
+      model = StateArgumentsWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
+      sequence = property.generate(DeterministicRng.new)
+
+      expect(sequence).to eq([
+        Pbt::Stateful::Property::Step.new(command: model.command, args: 3)
+      ])
+      expect { property.run(sequence) }.not_to raise_error
+    end
+
+    it "skips state-dependent arguments when a state-only applicable? command is inapplicable during generate" do
+      model = ZeroBalanceWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }.not_to raise_error
+      expect(property.generate(DeterministicRng.new)).to eq([])
+    end
+
+    it "raises invalid sequence without materializing state-dependent arguments during run" do
+      model = ZeroBalanceWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
+      sequence = [{command: model.command, args: 1}]
+
+      expect { property.run(sequence) }
+        .to raise_error(RuntimeError, /invalid stateful sequence at step 0: withdraw/)
+    end
+
+    it "supports arg-aware applicability via applicable?(state, args)" do
+      model = ArgAwareWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
+      sequence = property.generate(DeterministicRng.new)
+
+      expect(sequence).to eq([
+        Pbt::Stateful::Property::Step.new(command: model.command, args: 2)
+      ])
+      expect { property.run(sequence) }.not_to raise_error
+    end
+
+    it "skips non-total state-dependent arguments for arg-aware commands when no args can apply" do
+      model = ZeroBalanceArgAwareWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }.not_to raise_error
+      expect(property.generate(DeterministicRng.new)).to eq([])
+    end
+
+    it "does not swallow implementation bugs in state-dependent arguments for arg-aware commands" do
+      model = BrokenStateArgumentsModel.new
+      property = Pbt.stateful(model:, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(NoMethodError)
+    end
+
+    it "does not swallow arbitrary generation bugs for arg-aware commands" do
+      model = BrokenGenerateArgAwareModel.new
+      property = Pbt.stateful(model:, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(RuntimeError, /boom/)
+    end
+
+    it "retries arg generation for arg-aware commands before dropping the command" do
+      model = RetriableArgAwareModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
+      sequence = property.generate(SequencedRng.new(
+        range_values: {
+          [0, 1] => [1],
+          [1, 3] => [3, 2]
+        }
+      ))
+
+      expect(sequence).to eq([
+        Pbt::Stateful::Property::Step.new(command: model.command, args: 2)
+      ])
+    end
+
+    it "supports commands that use both arguments(state) and applicable?(state, args)" do
+      model = StrictWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
+      sequence = property.generate(DeterministicRng.new)
+
+      expect(sequence).to eq([
+        Pbt::Stateful::Property::Step.new(command: model.command, args: 3)
+      ])
+      expect { property.run(sequence) }.not_to raise_error
+    end
+
     it "raises a clear error when model.commands(state) does not return an Array" do
       property = Pbt.stateful(model: NonArrayCommandsModel.new, sut: -> { Object.new }, max_steps: 1)
 
@@ -61,6 +150,34 @@ RSpec.describe Pbt do
 
       expect { property.generate(Random.new(1)) }
         .to raise_error(Pbt::InvalidConfiguration, /command protocol mismatch.*MissingProtocolCommand.*name=:broken.*missing: run!, verify!/i)
+    end
+
+    it "raises a clear error when arguments has an unsupported signature" do
+      property = Pbt.stateful(model: InvalidArgumentsSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(Pbt::InvalidConfiguration, /invalid arguments signature; expected arguments or arguments\(state\)/i)
+    end
+
+    it "raises a clear error when applicable? has an unsupported signature" do
+      property = Pbt.stateful(model: InvalidApplicableSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(Pbt::InvalidConfiguration, /invalid applicable\? signature; expected applicable\?\(state\) or applicable\?\(state, args\)/i)
+    end
+
+    it "rejects keyword-only arguments signatures during validation" do
+      property = Pbt.stateful(model: KeywordArgumentsSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(Pbt::InvalidConfiguration, /invalid arguments signature; expected arguments or arguments\(state\)/i)
+    end
+
+    it "rejects keyword-only applicable? signatures during validation" do
+      property = Pbt.stateful(model: KeywordApplicableSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
+
+      expect { property.generate(DeterministicRng.new) }
+        .to raise_error(Pbt::InvalidConfiguration, /invalid applicable\? signature; expected applicable\?\(state\) or applicable\?\(state, args\)/i)
     end
 
     it "raises a clear error when command.arguments is not an arbitrary-like object" do
@@ -139,6 +256,28 @@ RSpec.describe Pbt do
         [{command: model.push_command, args: 2}],
         [{command: model.push_command, args: 1}],
         [{command: model.push_command, args: 0}]
+      ])
+    end
+
+    it "shrinks state-dependent command arguments with the arbitrary for the current state" do
+      model = StateArgumentsWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(3) }, max_steps: 1)
+      sequence = [{command: model.command, args: 3}]
+
+      expect(property.shrink(sequence).to_a).to eq([
+        [],
+        [{command: model.command, args: 2}],
+        [{command: model.command, args: 1}]
+      ])
+    end
+
+    it "does not materialize state-dependent arguments for inapplicable steps during shrink" do
+      model = ZeroBalanceWithdrawModel.new
+      property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
+      sequence = [{command: model.command, args: 1}]
+
+      expect(property.shrink(sequence).to_a).to eq([
+        []
       ])
     end
 
@@ -339,6 +478,400 @@ RSpec.describe Pbt do
     end
   end
 
+  class DeterministicRng
+    def rand(value)
+      case value
+      when Range
+        value.end
+      when Integer
+        0
+      else
+        raise "unsupported rand argument: #{value.inspect}"
+      end
+    end
+  end
+
+  class SequencedRng
+    def initialize(range_values: {})
+      @range_values = range_values.transform_values(&:dup)
+    end
+
+    def rand(value)
+      case value
+      when Range
+        key = [value.begin, value.end]
+        queue = @range_values[key]
+        return value.end if queue.nil? || queue.empty?
+
+        queue.shift
+      when Integer
+        0
+      else
+        raise "unsupported rand argument: #{value.inspect}"
+      end
+    end
+  end
+
+  class BankAccount
+    attr_reader :balance
+
+    def initialize(balance)
+      @balance = balance
+    end
+
+    def withdraw(amount)
+      @balance -= amount
+    end
+  end
+
+  class StateArgumentsWithdrawModel
+    attr_reader :command
+
+    def initialize
+      @command = StateArgumentsWithdrawCommand.new
+    end
+
+    def initial_state
+      3
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class StateArgumentsWithdrawCommand
+    def name
+      :withdraw
+    end
+
+    def arguments(state)
+      Pbt.integer(min: 1, max: state)
+    end
+
+    def applicable?(state)
+      state.positive?
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(sut, args)
+      sut.withdraw(args)
+    end
+
+    def verify!(after_state:, sut:, **)
+      raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
+  class ZeroBalanceWithdrawModel
+    attr_reader :command
+
+    def initialize
+      @command = NonTotalStateArgumentsWithdrawCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class NonTotalStateArgumentsWithdrawCommand
+    def name
+      :withdraw
+    end
+
+    def arguments(state)
+      raise "balance must be positive" unless state.positive?
+
+      Pbt.integer(min: 1, max: state)
+    end
+
+    def applicable?(state)
+      state.positive?
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(sut, args)
+      sut.withdraw(args)
+    end
+
+    def verify!(after_state:, sut:, **)
+      raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
+  class ArgAwareWithdrawModel
+    attr_reader :command
+
+    def initialize
+      @command = ArgAwareWithdrawCommand.new
+    end
+
+    def initial_state
+      3
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class ArgAwareWithdrawCommand
+    def name
+      :withdraw
+    end
+
+    def arguments
+      Pbt.constant(2)
+    end
+
+    def applicable?(state, args)
+      args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(sut, args)
+      sut.withdraw(args)
+    end
+
+    def verify!(after_state:, sut:, **)
+      raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
+  class ZeroBalanceArgAwareWithdrawModel
+    attr_reader :command
+
+    def initialize
+      @command = EmptyDomainArgAwareWithdrawCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class EmptyDomainArgAwareWithdrawCommand
+    def name
+      :withdraw
+    end
+
+    def arguments(state)
+      Pbt.integer(min: 1, max: state)
+    end
+
+    def applicable?(state, args)
+      args.positive? && args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(sut, args)
+      sut.withdraw(args)
+    end
+
+    def verify!(after_state:, sut:, **)
+      raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
+  class BrokenStateArgumentsModel
+    attr_reader :command
+
+    def initialize
+      @command = BrokenStateArgumentsCommand.new
+    end
+
+    def initial_state
+      1
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class BrokenStateArgumentsCommand
+    def name
+      :broken_arguments
+    end
+
+    def arguments(_state)
+      nil.foo
+    end
+
+    def applicable?(state, args)
+      args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class BrokenGenerateArgAwareModel
+    attr_reader :command
+
+    def initialize
+      @command = BrokenGenerateArgAwareCommand.new
+    end
+
+    def initial_state
+      1
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class BrokenGenerateArgAwareCommand
+    def name
+      :broken_generate
+    end
+
+    def arguments(_state)
+      BrokenGenerateArbitrary.new
+    end
+
+    def applicable?(state, args)
+      args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class BrokenGenerateArbitrary < Pbt::Arbitrary::Arbitrary
+    def generate(_rng)
+      raise "boom"
+    end
+
+    def shrink(_current)
+      Enumerator.new {}
+    end
+  end
+
+  class RetriableArgAwareModel
+    attr_reader :command
+
+    def initialize
+      @command = RetriableArgAwareCommand.new
+    end
+
+    def initial_state
+      3
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class RetriableArgAwareCommand
+    def name
+      :retry_withdraw
+    end
+
+    def arguments
+      Pbt.integer(min: 1, max: 3)
+    end
+
+    def applicable?(state, args)
+      args.even? && args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class StrictWithdrawModel
+    attr_reader :command
+
+    def initialize
+      @command = StrictWithdrawCommand.new
+    end
+
+    def initial_state
+      3
+    end
+
+    def commands(_state)
+      [command]
+    end
+  end
+
+  class StrictWithdrawCommand
+    def name
+      :withdraw_all
+    end
+
+    def arguments(state)
+      Pbt.constant(state)
+    end
+
+    def applicable?(state, args)
+      args == state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(sut, args)
+      sut.withdraw(args)
+    end
+
+    def verify!(after_state:, sut:, **)
+      raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
   class NonArrayCommandsModel
     def initial_state
       0
@@ -378,6 +911,166 @@ RSpec.describe Pbt do
 
     def next_state(state, _args)
       state
+    end
+  end
+
+  class InvalidArgumentsSignatureModel
+    def initialize
+      @command = InvalidArgumentsSignatureCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class InvalidArgumentsSignatureCommand
+    def name
+      :bad_arguments_signature
+    end
+
+    def arguments(_state, _extra)
+      Pbt.nil
+    end
+
+    def applicable?(_state)
+      true
+    end
+
+    def next_state(state, _args)
+      state
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class InvalidApplicableSignatureModel
+    def initialize
+      @command = InvalidApplicableSignatureCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class InvalidApplicableSignatureCommand
+    def name
+      :bad_applicable_signature
+    end
+
+    def arguments
+      Pbt.nil
+    end
+
+    def applicable?(_state, _args, _extra)
+      true
+    end
+
+    def next_state(state, _args)
+      state
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class KeywordArgumentsSignatureModel
+    def initialize
+      @command = KeywordArgumentsSignatureCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class KeywordArgumentsSignatureCommand
+    def name
+      :keyword_arguments
+    end
+
+    def arguments(state:)
+      Pbt.constant(state)
+    end
+
+    def applicable?(_state)
+      true
+    end
+
+    def next_state(state, _args)
+      state
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
+    end
+  end
+
+  class KeywordApplicableSignatureModel
+    def initialize
+      @command = KeywordApplicableSignatureCommand.new
+    end
+
+    def initial_state
+      0
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class KeywordApplicableSignatureCommand
+    def name
+      :keyword_applicable
+    end
+
+    def arguments
+      Pbt.nil
+    end
+
+    def applicable?(_state, args:)
+      args.nil?
+    end
+
+    def next_state(state, _args)
+      state
+    end
+
+    def run!(_sut, _args)
+      nil
+    end
+
+    def verify!(**)
+      nil
     end
   end
 

@@ -54,8 +54,8 @@ module Pbt
   #
   # Each command object is expected to provide:
   # - `name`
-  # - `arguments` (an arbitrary)
-  # - `applicable?(state)` -> bool
+  # - `arguments` (an arbitrary) or `arguments(state)`
+  # - `applicable?(state)` -> bool or `applicable?(state, args)` -> bool
   # - `next_state(state, args)`
   # - `run!(sut, args)` -> result
   # - `verify!(before_state:, after_state:, args:, result:, sut:)`

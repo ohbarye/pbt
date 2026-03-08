@@ -17,6 +17,10 @@ module Pbt
       # @see Arbitrary#generate
       def generate(rng)
         rng.rand(@min..@max)
+      rescue ArgumentError => e
+        raise EmptyDomainError, e.message if @min > @max
+
+        raise
       end
 
       # @see Arbitrary#shrink

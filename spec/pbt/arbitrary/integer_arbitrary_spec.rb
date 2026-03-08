@@ -16,6 +16,13 @@ RSpec.describe Pbt::Arbitrary::IntegerArbitrary do
         end
       end
     end
+
+    it "raises EmptyDomainError for an impossible range" do
+      arb = Pbt::Arbitrary::IntegerArbitrary.new(1, 0)
+
+      expect { arb.generate(Random.new) }
+        .to raise_error(Pbt::Arbitrary::EmptyDomainError)
+    end
   end
 
   describe "#shrink" do

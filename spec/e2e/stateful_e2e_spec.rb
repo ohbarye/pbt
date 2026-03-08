@@ -8,6 +8,12 @@ RSpec.describe Pbt do
       end
     end
 
+    it "runs state-dependent arguments and arg-aware applicability through the existing runner" do
+      Pbt.assert(seed: 2, num_runs: 1) do
+        Pbt.stateful(model: StatefulWithdrawModel.new, sut: -> { StatefulBankAccount.new(3) }, max_steps: 3)
+      end
+    end
+
     it "rejects ractor worker with a clear configuration error" do
       expect {
         Pbt.check(seed: 1, num_runs: 1, worker: :ractor) do
@@ -164,6 +170,58 @@ RSpec.describe Pbt do
 
     def verify!(args:, **)
       raise "positive arg required: #{args}" if args.positive?
+    end
+  end
+
+  class StatefulWithdrawModel
+    def initialize
+      @command = StatefulWithdrawCommand.new
+    end
+
+    def initial_state
+      3
+    end
+
+    def commands(_state)
+      [@command]
+    end
+  end
+
+  class StatefulWithdrawCommand
+    def name
+      :withdraw
+    end
+
+    def arguments(state)
+      Pbt.constant([state, 2].min)
+    end
+
+    def applicable?(state, args)
+      args.positive? && args <= state
+    end
+
+    def next_state(state, args)
+      state - args
+    end
+
+    def run!(sut, args)
+      sut.withdraw(args)
+    end
+
+    def verify!(after_state:, sut:, **)
+      raise "withdraw mismatch" unless sut.balance == after_state
+    end
+  end
+
+  class StatefulBankAccount
+    attr_reader :balance
+
+    def initialize(balance)
+      @balance = balance
+    end
+
+    def withdraw(amount)
+      @balance -= amount
     end
   end
   # standard:enable Lint/ConstantDefinitionInBlock
