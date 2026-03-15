@@ -36,6 +36,10 @@ module Pbt
         property = property.call
         config = Pbt.configuration.to_h.merge(options.to_h)
 
+        if property.respond_to?(:stateful?) && property.stateful? && !options.key?(:worker)
+          config[:worker] = :none
+        end
+
         initial_values = toss(property, config[:seed])
         source_values = Enumerator.new(config[:num_runs]) do |y|
           config[:num_runs].times do
@@ -115,12 +119,33 @@ module Pbt
         runner.map.with_index { |val, index|
           Case.new(val:, index:, ractor: property.run_in_ractor(val))
         }.each do |c|
-          c.ractor.take
+          wait_ractor_result(c.ractor)
           runner.handle_result(c)
         rescue => e
-          c.exception = e.cause # Ractor error is wrapped in a Ractor::RemoteError. We need to get the cause.
+          c.exception = unwrap_ractor_exception(e)
           runner.handle_result(c)
           break # Ignore the rest of the cases. Just pick up the first failure.
+        end
+      end
+
+      # Ractor errors can wrap the original exception in a `cause` (e.g. `Ractor::RemoteError`).
+      # If no cause exists, keep the original exception instance.
+      #
+      # @param error [Exception]
+      # @return [Exception]
+      def unwrap_ractor_exception(error)
+        error.cause || error
+      end
+
+      # Ruby 4 removed Ractor#take in favor of Ractor#value.
+      #
+      # @param ractor [Ractor]
+      # @return [Object]
+      def wait_ractor_result(ractor)
+        if ractor.respond_to?(:value)
+          ractor.value
+        else
+          ractor.take
         end
       end
     end

@@ -97,6 +97,11 @@ module Pbt
         end
       end
 
+      # @return [Boolean]
+      def stateful?
+        true
+      end
+
       # Stateful properties currently require sequential execution because the model,
       # commands and SUT factory are ordinary Ruby objects and are not guaranteed to be
       # Ractor-shareable.

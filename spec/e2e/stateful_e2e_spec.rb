@@ -14,6 +14,17 @@ RSpec.describe Pbt do
       end
     end
 
+    it "defaults to :none for stateful properties even when global worker is :ractor" do
+      original_worker = Pbt.configuration.worker
+      Pbt.configure { |config| config.worker = :ractor }
+
+      Pbt.assert(seed: 2, num_runs: 1) do
+        Pbt.stateful(model: PassingCounterModel.new, sut: -> { Object.new }, max_steps: 1)
+      end
+    ensure
+      Pbt.configure { |config| config.worker = original_worker }
+    end
+
     it "rejects ractor worker with a clear configuration error" do
       expect {
         Pbt.check(seed: 1, num_runs: 1, worker: :ractor) do
