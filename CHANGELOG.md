@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.6.0] - 2026-03-15
+
+- Add experimental `Pbt.stateful` API for model-based stateful property testing [#38](https://github.com/ohbarye/pbt/pull/38)
+- Support state-aware and arg-aware stateful command protocols, including argument shrinking and generation edge cases [#40](https://github.com/ohbarye/pbt/pull/40)
+- Validate stateful model/command contracts more consistently and improve diagnostics [#39](https://github.com/ohbarye/pbt/pull/39)
+- Add Ruby 4.0 to CI test matrix
+
 ## [0.5.1] - 2025-06-29
 
 - Fix `IntegerArbitrary#shrink` to respect min/max bounds [#36](https://github.com/ohbarye/pbt/pull/36)

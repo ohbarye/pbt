@@ -145,6 +145,8 @@ See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrar
 `Pbt` also provides an experimental stateful property API for model-based / command-based testing.
 It is designed as a property-compatible object (`generate`, `shrink`, `run`) so it works with the existing runner (`Pbt.assert` / `Pbt.check`) without changing the runner API.
 
+This API is still experimental. Expect interface refinements and behavior changes in future releases.
+
 ### Minimal usage
 
 ```ruby
@@ -202,7 +204,7 @@ class Counter
   end
 end
 
-Pbt.assert(worker: :none) do
+Pbt.assert do
   Pbt.stateful(
     model: CounterModel.new,
     sut: -> { Counter.new },
@@ -226,7 +228,8 @@ end
 
 ### Current limitations (MVP)
 
-- Use `worker: :none` for stateful properties.
+- `Pbt.stateful` runs sequentially by default, even if the global worker is `:ractor`.
+- You can still pass `worker: :none` explicitly if you want to make that choice obvious in a test.
 - `worker: :ractor` is currently unsupported and raises `Pbt::InvalidConfiguration`.
 - Shrinking supports shorter prefixes and command-argument shrinking (using `command.arguments.shrink(args)`).
 
