@@ -16,7 +16,7 @@ module Pbt
       #
       # @param rng [Random] Random number generator.
       # @return [Object]
-      def generate(rng)
+      def generate(rng = Random.new)
         @arb.generate(rng)
       end
 

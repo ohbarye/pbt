@@ -11,9 +11,9 @@ module Pbt
       # Generate a value of type `T`, based on the provided random number generator.
       #
       # @abstract
-      # @param rng [Random] Random number generator.
+      # @param rng [Random] Random number generator. Defaults to a new Random instance.
       # @return [Object] Random value of type `T`.
-      def generate(rng)
+      def generate(rng = Random.new)
         raise NotImplementedError
       end
 

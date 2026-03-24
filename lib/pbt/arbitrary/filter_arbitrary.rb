@@ -12,7 +12,7 @@ module Pbt
       end
 
       # @see Arbitrary#generate
-      def generate(rng)
+      def generate(rng = Random.new)
         loop do
           val = @arb.generate(rng)
           return val if @refinement.call(val)

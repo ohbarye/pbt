@@ -15,7 +15,7 @@ module Pbt
       end
 
       # @see Arbitrary#generate
-      def generate(rng)
+      def generate(rng = Random.new)
         rng.rand(@min..@max)
       rescue ArgumentError => e
         raise EmptyDomainError, e.message if @min > @max

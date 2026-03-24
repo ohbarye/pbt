@@ -14,7 +14,7 @@ module Pbt
       end
 
       # @see Arbitrary#generate
-      def generate(rng)
+      def generate(rng = Random.new)
         @mapper.call(@arb.generate(rng))
       end
 

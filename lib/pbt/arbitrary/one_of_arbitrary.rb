@@ -11,7 +11,7 @@ module Pbt
       end
 
       # @see Arbitrary#generate
-      def generate(rng)
+      def generate(rng = Random.new)
         @choices[@idx_arb.generate(rng)]
       end
 

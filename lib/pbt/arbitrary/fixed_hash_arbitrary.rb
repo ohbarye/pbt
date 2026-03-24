@@ -11,7 +11,7 @@ module Pbt
       end
 
       # @see Arbitrary#generate
-      def generate(rng)
+      def generate(rng = Random.new)
         values = @arb.generate(rng)
         @keys.zip(values).to_h
       end

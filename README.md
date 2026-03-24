@@ -108,34 +108,37 @@ There are many built-in arbitraries in `Pbt`. You can use them to generate rando
 #### Primitives
 
 ```ruby
-rng = Random.new
+Pbt.integer.generate                  # => 42
+Pbt.integer(min: -1, max: 8).generate # => Integer between -1 and 8
 
-Pbt.integer.generate(rng)                  # => 42
-Pbt.integer(min: -1, max: 8).generate(rng) # => Integer between -1 and 8
+Pbt.symbol.generate                   # => :atq
 
-Pbt.symbol.generate(rng)                   # => :atq
+Pbt.ascii_char.generate               # => "a"
+Pbt.ascii_string.generate             # => "aagjZfao"
 
-Pbt.ascii_char.generate(rng)               # => "a"
-Pbt.ascii_string.generate(rng)             # => "aagjZfao"
+Pbt.boolean.generate                  # => true or false
+Pbt.constant(42).generate             # => 42 always
+```
 
-Pbt.boolean.generate(rng)                  # => true or false
-Pbt.constant(42).generate(rng)             # => 42 always
+You can also pass a custom random number generator if needed:
+
+```ruby
+rng = Random.new(42) # with a specific seed for reproducibility
+Pbt.integer.generate(rng)
 ```
 
 #### Composites
 
 ```ruby
-rng = Random.new
+Pbt.array(Pbt.integer).generate                        # => [121, -13141, 9825]
+Pbt.array(Pbt.integer, max: 1, empty: true).generate   # => [] or [42] etc.
 
-Pbt.array(Pbt.integer).generate(rng)                        # => [121, -13141, 9825]
-Pbt.array(Pbt.integer, max: 1, empty: true).generate(rng)   # => [] or [42] etc.
+Pbt.tuple(Pbt.symbol, Pbt.integer).generate            # => [:atq, 42]
 
-Pbt.tuple(Pbt.symbol, Pbt.integer).generate(rng)            # => [:atq, 42]
+Pbt.fixed_hash(x: Pbt.symbol, y: Pbt.integer).generate # => {x: :atq, y: 42}
+Pbt.hash(Pbt.symbol, Pbt.integer).generate             # => {atq: 121, ygab: -1142}
 
-Pbt.fixed_hash(x: Pbt.symbol, y: Pbt.integer).generate(rng) # => {x: :atq, y: 42}
-Pbt.hash(Pbt.symbol, Pbt.integer).generate(rng)             # => {atq: 121, ygab: -1142}
-
-Pbt.one_of(:a, 1, 0.1).generate(rng)                        # => :a or 1 or 0.1
+Pbt.one_of(:a, 1, 0.1).generate                        # => :a or 1 or 0.1
 ````
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.

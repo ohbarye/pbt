@@ -50,7 +50,7 @@ module Pbt
       #
       # @param rng [Random]
       # @return [Array<Step>]
-      def generate(rng)
+      def generate(rng = Random.new)
         length = rng.rand(0..@max_steps)
         state = @model.initial_state
         sequence = []
