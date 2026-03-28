@@ -34,7 +34,7 @@ Add this line to your application's Gemfile and run `bundle install`.
 gem 'pbt'
 ```
 
-Off course you can install with `gem intstall pbt`.
+Of course you can install with `gem install pbt`.
 
 ## Basic Usage
 
@@ -421,7 +421,7 @@ Once this project finishes the following, we will release v1.0.0.
 - [ ] Statistics feature to aggregate generated values
 - [ ] Decide DSL
 - [ ] Try Fiber
-- [ ] Stateful property-based testing
+- [x] Stateful property-based testing (experimental, via `Pbt.stateful`)
 
 ## Development
 
@@ -430,6 +430,12 @@ Once this project finishes the following, we will release v1.0.0.
 ```shell
 bin/setup
 bundle exec rake # Run tests and lint at once
+```
+
+If you use [mise](https://mise.jdx.dev/) to manage Ruby versions, prefix commands with `mise exec --`:
+
+```shell
+mise exec -- bundle exec rake
 ```
 
 ### Test
