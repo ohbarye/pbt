@@ -207,11 +207,6 @@ module Pbt
             "Pbt.stateful command protocol mismatch for #{command.class} " \
             "(name=#{safe_command_label(command)}, missing: #{missing_methods.join(", ")}, context=#{context})"
         end
-
-        validate_command_signature!(command, :arguments, valid_counts: [0, 1], expectation: "arguments or arguments(state)",
-          context:)
-        validate_command_signature!(command, :applicable?, valid_counts: [1, 2],
-          expectation: "applicable?(state) or applicable?(state, args)", context:)
       end
 
       # @param command [Object]
@@ -252,12 +247,6 @@ module Pbt
       # @param context [String]
       # @return [Object]
       def generate_applicable_args(command, state, rng, context:)
-        unless arg_aware_command?(command)
-          return NoApplicableArgs unless applicable?(command, state, nil, context:)
-
-          return arbitrary_for(command, state, context:).generate(rng)
-        end
-
         arbitrary = arbitrary_for(command, state, context:)
 
         ARG_AWARE_GENERATION_ATTEMPTS.times do
@@ -275,15 +264,7 @@ module Pbt
       # @param context [String]
       # @return [Object]
       def arguments_for(command, state, context:)
-        method = command.method(:arguments)
-
-        if supports_argument_count?(method, 1)
-          command.arguments(state)
-        elsif supports_argument_count?(method, 0)
-          command.arguments
-        else
-          raise_invalid_signature!(command, :arguments, "arguments or arguments(state)", context)
-        end
+        command.arguments(state)
       end
 
       # @param command [Object]
@@ -303,8 +284,6 @@ module Pbt
       def generate_args_for(command, arbitrary, rng)
         arbitrary.generate(rng)
       rescue Pbt::Arbitrary::EmptyDomainError
-        raise unless state_aware_arg_aware_command?(command)
-
         NoApplicableArgs
       end
 
@@ -314,84 +293,7 @@ module Pbt
       # @param context [String]
       # @return [Boolean]
       def applicable?(command, state, args, context:)
-        method = command.method(:applicable?)
-
-        if supports_argument_count?(method, 2)
-          command.applicable?(state, args)
-        elsif supports_argument_count?(method, 1)
-          command.applicable?(state)
-        else
-          raise_invalid_signature!(command, :applicable?, "applicable?(state) or applicable?(state, args)", context)
-        end
-      end
-
-      # @param command [Object]
-      # @return [Boolean]
-      def arg_aware_command?(command)
-        supports_argument_count?(command.method(:applicable?), 2)
-      end
-
-      # @param command [Object]
-      # @return [Boolean]
-      def state_aware_arg_aware_command?(command)
-        arg_aware_command?(command) && supports_argument_count?(command.method(:arguments), 1)
-      end
-
-      # @param command [Object]
-      # @param method_name [Symbol]
-      # @param valid_counts [Array<Integer>]
-      # @param expectation [String]
-      # @param context [String]
-      # @return [void]
-      def validate_command_signature!(command, method_name, valid_counts:, expectation:, context:)
-        method = command.method(method_name)
-        return if valid_counts.any? { |count| supports_argument_count?(method, count) }
-
-        raise_invalid_signature!(command, method_name, expectation, context)
-      end
-
-      # @param command [Object]
-      # @param method_name [Symbol]
-      # @param expectation [String]
-      # @param context [String]
-      # @return [void]
-      def raise_invalid_signature!(command, method_name, expectation, context)
-        raise Pbt::InvalidConfiguration,
-          "Pbt.stateful command protocol mismatch for #{command.class} " \
-          "(name=#{safe_command_label(command)}, invalid #{method_name} signature; expected #{expectation}, context=#{context})"
-      end
-
-      # @param method [Method]
-      # @param count [Integer]
-      # @return [Boolean]
-      def supports_argument_count?(method, count)
-        return false if method.parameters.any? { |kind, _name| keyword_parameter?(kind) }
-
-        required = 0
-        optional = 0
-        rest = false
-
-        method.parameters.each do |kind, _name|
-          case kind
-          when :req
-            required += 1
-          when :opt
-            optional += 1
-          when :rest
-            rest = true
-          end
-        end
-
-        return false if count < required
-        return true if rest
-
-        count <= required + optional
-      end
-
-      # @param kind [Symbol]
-      # @return [Boolean]
-      def keyword_parameter?(kind)
-        %i[keyreq key keyrest].include?(kind)
+        command.applicable?(state, args)
       end
 
       # @param sequence [Array<Hash, Step>]

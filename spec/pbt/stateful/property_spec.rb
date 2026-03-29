@@ -60,7 +60,7 @@ RSpec.describe Pbt do
       expect { property.run(sequence) }.not_to raise_error
     end
 
-    it "skips state-dependent arguments when a state-only applicable? command is inapplicable during generate" do
+    it "skips commands when state-dependent arguments produce an empty domain during generate" do
       model = ZeroBalanceWithdrawModel.new
       property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
 
@@ -68,7 +68,7 @@ RSpec.describe Pbt do
       expect(property.generate(DeterministicRng.new)).to eq([])
     end
 
-    it "raises invalid sequence without materializing state-dependent arguments during run" do
+    it "raises invalid sequence when command is inapplicable during run" do
       model = ZeroBalanceWithdrawModel.new
       property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
       sequence = [{command: model.command, args: 1}]
@@ -152,32 +152,18 @@ RSpec.describe Pbt do
         .to raise_error(Pbt::InvalidConfiguration, /command protocol mismatch.*MissingProtocolCommand.*name=:broken.*missing: run!, verify!/i)
     end
 
-    it "raises a clear error when arguments has an unsupported signature" do
+    it "raises ArgumentError when arguments has a wrong arity" do
       property = Pbt.stateful(model: InvalidArgumentsSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
 
       expect { property.generate(DeterministicRng.new) }
-        .to raise_error(Pbt::InvalidConfiguration, /invalid arguments signature; expected arguments or arguments\(state\)/i)
+        .to raise_error(ArgumentError)
     end
 
-    it "raises a clear error when applicable? has an unsupported signature" do
+    it "raises ArgumentError when applicable? has a wrong arity" do
       property = Pbt.stateful(model: InvalidApplicableSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
 
       expect { property.generate(DeterministicRng.new) }
-        .to raise_error(Pbt::InvalidConfiguration, /invalid applicable\? signature; expected applicable\?\(state\) or applicable\?\(state, args\)/i)
-    end
-
-    it "rejects keyword-only arguments signatures during validation" do
-      property = Pbt.stateful(model: KeywordArgumentsSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
-
-      expect { property.generate(DeterministicRng.new) }
-        .to raise_error(Pbt::InvalidConfiguration, /invalid arguments signature; expected arguments or arguments\(state\)/i)
-    end
-
-    it "rejects keyword-only applicable? signatures during validation" do
-      property = Pbt.stateful(model: KeywordApplicableSignatureModel.new, sut: -> { Object.new }, max_steps: 1)
-
-      expect { property.generate(DeterministicRng.new) }
-        .to raise_error(Pbt::InvalidConfiguration, /invalid applicable\? signature; expected applicable\?\(state\) or applicable\?\(state, args\)/i)
+        .to raise_error(ArgumentError)
     end
 
     it "raises a clear error when command.arguments is not an arbitrary-like object" do
@@ -271,7 +257,7 @@ RSpec.describe Pbt do
       ])
     end
 
-    it "does not materialize state-dependent arguments for inapplicable steps during shrink" do
+    it "skips inapplicable steps during shrink" do
       model = ZeroBalanceWithdrawModel.new
       property = Pbt.stateful(model:, sut: -> { BankAccount.new(0) }, max_steps: 1)
       sequence = [{command: model.command, args: 1}]
@@ -347,11 +333,11 @@ RSpec.describe Pbt do
       :push
     end
 
-    def arguments
+    def arguments(_state)
       Pbt.integer(min: 0, max: 3)
     end
 
-    def applicable?(_state)
+    def applicable?(_state, _args)
       true
     end
 
@@ -373,11 +359,11 @@ RSpec.describe Pbt do
       :pop
     end
 
-    def arguments
+    def arguments(_state)
       Pbt.nil
     end
 
-    def applicable?(state)
+    def applicable?(state, _args)
       !state.empty?
     end
 
@@ -443,11 +429,11 @@ RSpec.describe Pbt do
       :dup_shrink
     end
 
-    def arguments
+    def arguments(_state)
       DuplicateShrinkArbitrary.new
     end
 
-    def applicable?(_state)
+    def applicable?(_state, _args)
       true
     end
 
@@ -549,7 +535,7 @@ RSpec.describe Pbt do
       Pbt.integer(min: 1, max: state)
     end
 
-    def applicable?(state)
+    def applicable?(state, _args)
       state.positive?
     end
 
@@ -588,12 +574,10 @@ RSpec.describe Pbt do
     end
 
     def arguments(state)
-      raise "balance must be positive" unless state.positive?
-
-      Pbt.integer(min: 1, max: state)
+      Pbt.integer(min: 1, max: [state, 0].max)
     end
 
-    def applicable?(state)
+    def applicable?(state, _args)
       state.positive?
     end
 
@@ -631,7 +615,7 @@ RSpec.describe Pbt do
       :withdraw
     end
 
-    def arguments
+    def arguments(_state)
       Pbt.constant(2)
     end
 
@@ -809,7 +793,7 @@ RSpec.describe Pbt do
       :retry_withdraw
     end
 
-    def arguments
+    def arguments(_state)
       Pbt.integer(min: 1, max: 3)
     end
 
@@ -901,11 +885,11 @@ RSpec.describe Pbt do
       :broken
     end
 
-    def arguments
+    def arguments(_state)
       Pbt.nil
     end
 
-    def applicable?(_state)
+    def applicable?(_state, _args)
       true
     end
 
@@ -937,7 +921,7 @@ RSpec.describe Pbt do
       Pbt.nil
     end
 
-    def applicable?(_state)
+    def applicable?(_state, _args)
       true
     end
 
@@ -973,92 +957,12 @@ RSpec.describe Pbt do
       :bad_applicable_signature
     end
 
-    def arguments
+    def arguments(_state)
       Pbt.nil
     end
 
     def applicable?(_state, _args, _extra)
       true
-    end
-
-    def next_state(state, _args)
-      state
-    end
-
-    def run!(_sut, _args)
-      nil
-    end
-
-    def verify!(**)
-      nil
-    end
-  end
-
-  class KeywordArgumentsSignatureModel
-    def initialize
-      @command = KeywordArgumentsSignatureCommand.new
-    end
-
-    def initial_state
-      0
-    end
-
-    def commands(_state)
-      [@command]
-    end
-  end
-
-  class KeywordArgumentsSignatureCommand
-    def name
-      :keyword_arguments
-    end
-
-    def arguments(state:)
-      Pbt.constant(state)
-    end
-
-    def applicable?(_state)
-      true
-    end
-
-    def next_state(state, _args)
-      state
-    end
-
-    def run!(_sut, _args)
-      nil
-    end
-
-    def verify!(**)
-      nil
-    end
-  end
-
-  class KeywordApplicableSignatureModel
-    def initialize
-      @command = KeywordApplicableSignatureCommand.new
-    end
-
-    def initial_state
-      0
-    end
-
-    def commands(_state)
-      [@command]
-    end
-  end
-
-  class KeywordApplicableSignatureCommand
-    def name
-      :keyword_applicable
-    end
-
-    def arguments
-      Pbt.nil
-    end
-
-    def applicable?(_state, args:)
-      args.nil?
     end
 
     def next_state(state, _args)
@@ -1093,11 +997,11 @@ RSpec.describe Pbt do
       :bad_arguments
     end
 
-    def arguments
+    def arguments(_state)
       :not_an_arbitrary
     end
 
-    def applicable?(_state)
+    def applicable?(_state, _args)
       true
     end
 

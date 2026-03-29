@@ -82,11 +82,11 @@ RSpec.describe Pbt do
       :tick
     end
 
-    def arguments
+    def arguments(_state)
       Pbt.nil
     end
 
-    def applicable?(_state)
+    def applicable?(_state, _args)
       true
     end
 
@@ -123,11 +123,11 @@ RSpec.describe Pbt do
       :boom
     end
 
-    def arguments
+    def arguments(_state)
       Pbt.nil
     end
 
-    def applicable?(_state)
+    def applicable?(_state, _args)
       true
     end
 
@@ -163,11 +163,11 @@ RSpec.describe Pbt do
       :positive_only
     end
 
-    def arguments
+    def arguments(_state)
       Pbt.integer(min: 0, max: 3)
     end
 
-    def applicable?(_state)
+    def applicable?(_state, _args)
       true
     end
 

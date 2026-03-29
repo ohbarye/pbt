@@ -169,11 +169,11 @@ class IncrementCommand
     :increment
   end
 
-  def arguments
+  def arguments(_state)
     Pbt.nil
   end
 
-  def applicable?(_state)
+  def applicable?(_state, _args)
     true
   end
 
@@ -220,8 +220,8 @@ end
 - `model.initial_state`
 - `model.commands(state)` -> `Array<command>`
 - `command.name`
-- `command.arguments` (a `Pbt` arbitrary)
-- `command.applicable?(state)` -> `true` / `false`
+- `command.arguments(state)` (a `Pbt` arbitrary, may depend on current model state)
+- `command.applicable?(state, args)` -> `true` / `false`
 - `command.next_state(state, args)` -> next model state
 - `command.run!(sut, args)` -> command result
 - `command.verify!(before_state:, after_state:, args:, result:, sut:)`
