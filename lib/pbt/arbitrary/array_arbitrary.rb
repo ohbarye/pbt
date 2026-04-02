@@ -20,7 +20,7 @@ module Pbt
       end
 
       # @see Arbitrary#generate
-      def generate(rng)
+      def generate(rng = Random.new)
         length = @length_arb.generate(rng)
         length.times.map { @value_arb.generate(rng) }
       end
