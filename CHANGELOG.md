@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [0.7.0] - 2026-04-04
+
+- [Breaking change] Simplify stateful command protocol: `arguments` must now accept `state` parameter, and `applicable?` must now accept both `state` and `args` parameters
+- Make `rng` optional in all arbitrary `generate` methods with default `Random.new` [#44](https://github.com/ohbarye/pbt/pull/44)
+- Mark stateful testing API as stable (no longer experimental)
+
 ## [0.6.0] - 2026-03-15
 
 - Add experimental `Pbt.stateful` API for model-based stateful property testing [#38](https://github.com/ohbarye/pbt/pull/38)

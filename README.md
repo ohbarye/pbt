@@ -435,12 +435,6 @@ bin/setup
 bundle exec rake # Run tests and lint at once
 ```
 
-If you use [mise](https://mise.jdx.dev/) to manage Ruby versions, prefix commands with `mise exec --`:
-
-```shell
-mise exec -- bundle exec rake
-```
-
 ### Test
 
 ```shell
