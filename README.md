@@ -143,12 +143,12 @@ Pbt.one_of(:a, 1, 0.1).generate                        # => :a or 1 or 0.1
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.
 
-## Stateful Testing (Experimental)
+## Stateful Testing
 
-`Pbt` also provides an experimental stateful property API for model-based / command-based testing.
+`Pbt` also provides a stateful property API for model-based / command-based testing.
 It is designed as a property-compatible object (`generate`, `shrink`, `run`) so it works with the existing runner (`Pbt.assert` / `Pbt.check`) without changing the runner API.
 
-This API is still experimental. Expect interface refinements and behavior changes in future releases.
+The stateful API is stable as of v0.7.0. Commands must implement `arguments(state)` and `applicable?(state, args)`; the earlier zero-argument / state-only forms are no longer supported.
 
 ### Minimal usage
 
@@ -229,12 +229,12 @@ end
 - `command.run!(sut, args)` -> command result
 - `command.verify!(before_state:, after_state:, args:, result:, sut:)`
 
-### Current limitations (MVP)
+### Current limitations
 
 - `Pbt.stateful` runs sequentially by default, even if the global worker is `:ractor`.
 - You can still pass `worker: :none` explicitly if you want to make that choice obvious in a test.
 - `worker: :ractor` is currently unsupported and raises `Pbt::InvalidConfiguration`.
-- Shrinking supports shorter prefixes and command-argument shrinking (using `command.arguments.shrink(args)`).
+- Shrinking supports shorter prefixes and command-argument shrinking (using `command.arguments(state).shrink(args)`).
 
 ## What if property-based tests fail?
 
@@ -424,7 +424,7 @@ Once this project finishes the following, we will release v1.0.0.
 - [ ] Statistics feature to aggregate generated values
 - [ ] Decide DSL
 - [ ] Try Fiber
-- [x] Stateful property-based testing (experimental, via `Pbt.stateful`)
+- [x] Stateful property-based testing (via `Pbt.stateful`)
 
 ## Development
 
