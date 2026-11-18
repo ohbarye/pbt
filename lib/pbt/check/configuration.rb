@@ -8,8 +8,7 @@ module Pbt
       :worker,
       :num_runs,
       :seed,
-      :thread_report_on_exception,
-      keyword_init: true
+      :thread_report_on_exception
     ) do
       # @param verbose [Boolean] Whether to print verbose output. Default is `false`.
       # @param worker [Symbol] The concurrency method to use. :ractor` and `:none` are supported. Default is `:none`.

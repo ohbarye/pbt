@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.summary = "Property-Based Testing tool for Ruby, utilizing Ractor for parallelizing test cases."
   spec.homepage = "https://github.com/ohbarye/pbt"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.1"
+  spec.required_ruby_version = ">= 3.3"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = spec.homepage
