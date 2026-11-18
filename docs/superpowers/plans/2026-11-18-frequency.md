@@ -6,7 +6,7 @@
 **Architecture:** Preserve ordinary generated values. A per-value Sample contains lazy shrink
 children; standard properties use samples internally so provenance survives eager Ractor
 generation and composition. No global cache or last-generated-branch state.
-**Tech stack:** Ruby >= 3.1, RSpec, Standard, no runtime dependencies.
+**Tech stack:** Ruby >= 3.3, RSpec, Standard, no runtime dependencies.
 **Spec:** User-approved weighted-generator API; existing `generate`/`shrink` compatibility.
 
 ## Contract and constraints
@@ -33,3 +33,8 @@ generation and composition. No global cache or last-generated-branch state.
 ## Review focus
 Equal values from different generators; pre-generation before shrinking; nested composition;
 custom duck-typed arbitraries; plain-value reporting and compatibility with stateful properties.
+
+Progress: red tests reviewed and committed d4b1fa3. Implementation passes 201 specs.
+Correction: tuple sum=10 assertion overpromised existing halving shrink algorithm;
+independent investigation confirmed [0,14], corrected regression expectation.
+External Ruby floor/CI edits remain outside this PR.

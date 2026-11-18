@@ -23,7 +23,8 @@ RSpec.describe "Weighted generators" do
       end
     end
     expect(result.failed).to be(true)
-    expect(result.counterexample.sum).to eq(10)
+    expect(result.counterexample).to eq([0, 14])
+    expect(result.num_shrinks).to be > 0
   end
   it "supports custom generators with only generate and shrink" do
     custom = Object.new

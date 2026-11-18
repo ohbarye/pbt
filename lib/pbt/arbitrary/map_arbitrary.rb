@@ -18,6 +18,14 @@ module Pbt
         @mapper.call(@arb.generate(rng))
       end
 
+      def contextual?
+        Sample.contextual?(@arb)
+      end
+
+      def sample(rng = Random.new)
+        Sample.capture(@arb, rng).map(&@mapper)
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         Enumerator.new do |y|

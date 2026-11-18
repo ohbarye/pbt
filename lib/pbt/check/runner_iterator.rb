@@ -48,7 +48,7 @@ module Pbt
         if c.exception
           # failed run
           @run_execution.record_failure(c)
-          @next_values = @property.shrink(c.val)
+          @next_values = c.sample ? c.sample.shrink : @property.shrink(c.val)
         else
           # successful run
           @run_execution.record_success(c)

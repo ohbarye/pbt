@@ -16,6 +16,14 @@ module Pbt
         @keys.zip(values).to_h
       end
 
+      def contextual?
+        Sample.contextual?(@arb)
+      end
+
+      def sample(rng = Random.new)
+        @arb.sample(rng).map { |values| @keys.zip(values).to_h }
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         # This is not the most comprehensive but allows a reasonable number of entries in the shrink
