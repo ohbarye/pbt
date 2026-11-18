@@ -145,6 +145,29 @@ Pbt.one_of(:a, 1, 0.1).generate                        # => :a or 1 or 0.1
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.
 
+### Weighted generators
+
+Use `Pbt.frequency` to select generators by relative nonnegative integer weights:
+
+```ruby
+Pbt.assert(seed: 42) do
+  Pbt.property(Pbt.frequency([3, Pbt.integer], [1, Pbt.constant(nil)])) do |value|
+    raise "unexpected value" unless value.nil? || value.is_a?(Integer)
+  end
+end
+```
+
+At least one weight must be positive. Zero-weight generators are never selected.
+Normal property execution retains the selected generator's shrink tree, including
+inside arrays, tuples, fixed hashes, maps and filters. Shrinking stays within that
+branch. Generated values and reported counterexamples remain ordinary Ruby values.
+
+For manual shrinking, retain a sample: `sample = arb.sample(Random.new(42))`,
+then inspect `sample.value` and `sample.shrink.map(&:value)`. Calling
+`arb.shrink(value)` directly on a frequency generator returns no candidates because
+a bare value cannot identify its source generator. Stateful command arguments use
+the plain-value protocol, so frequency branches there do not shrink their arguments.
+
 ## Stateful Testing
 
 `Pbt` also provides a stateful property API for model-based / command-based testing.
@@ -422,7 +445,7 @@ Once this project finishes the following, we will release v1.0.0.
 - [x] Rich report by verbose mode
 - [x] (Partially) Allow to use expectations and matchers provided by test framework in Ractor. (dropped)
   - It'd be so hard to pass assertions like `expect`, `assert` to a Ractor.
-- [ ] Implement frequency arbitrary
+- [x] Implement frequency arbitrary
 - [ ] Statistics feature to aggregate generated values
 - [ ] Decide DSL
 - [ ] Try Fiber

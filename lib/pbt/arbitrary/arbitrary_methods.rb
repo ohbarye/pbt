@@ -9,6 +9,7 @@ require "pbt/arbitrary/tuple_arbitrary"
 require "pbt/arbitrary/fixed_hash_arbitrary"
 require "pbt/arbitrary/choose_arbitrary"
 require "pbt/arbitrary/one_of_arbitrary"
+require "pbt/arbitrary/frequency_arbitrary"
 require "pbt/arbitrary/map_arbitrary"
 require "pbt/arbitrary/filter_arbitrary"
 
@@ -83,6 +84,16 @@ module Pbt
       # @return [Arbitrary<Object>]
       def one_of(*choices)
         OneOfArbitrary.new(choices)
+      end
+
+      # Select a generator by relative integer weight. Zero-weight choices are ignored.
+      # Shrinks within the selected generator when used with Pbt.property or sample.
+      # @example
+      #   Pbt.frequency([3, Pbt.integer], [1, Pbt.constant(nil)])
+      # @param choices [Array<Array(Integer, Arbitrary)>]
+      # @return [FrequencyArbitrary]
+      def frequency(*choices)
+        FrequencyArbitrary.new(choices)
       end
 
       # For a lowercase hexadecimal character.

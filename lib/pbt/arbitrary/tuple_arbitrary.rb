@@ -14,6 +14,14 @@ module Pbt
         @arbs.map { |arb| arb.generate(rng) }
       end
 
+      def contextual?
+        @arbs.any? { |arb| Sample.contextual?(arb) }
+      end
+
+      def sample(rng = Random.new)
+        Sample.tuple(@arbs.map { |arb| Sample.capture(arb, rng) })
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         # This is not the most comprehensive but allows a reasonable number of entries in the shrink.

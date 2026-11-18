@@ -19,6 +19,17 @@ module Pbt
         end
       end
 
+      def contextual?
+        Sample.contextual?(@arb)
+      end
+
+      def sample(rng = Random.new)
+        loop do
+          sample = Sample.capture(@arb, rng)
+          return sample.filter(&@refinement) if @refinement.call(sample.value)
+        end
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         Enumerator.new do |y|

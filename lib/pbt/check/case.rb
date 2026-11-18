@@ -3,6 +3,6 @@
 module Pbt
   module Check
     # @private
-    Case = Struct.new(:val, :ractor, :exception, :index)
+    Case = Struct.new(:val, :ractor, :exception, :index, :sample)
   end
 end

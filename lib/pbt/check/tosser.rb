@@ -25,7 +25,7 @@ module Pbt
       # @param arb [Arbitrary] Arbitrary to generate a value.
       # @param rng [Random] Random number generator.
       def toss_next(arb, rng)
-        arb.generate(rng)
+        arb.respond_to?(:generate_for_check) ? arb.generate_for_check(rng) : arb.generate(rng)
       end
     end
   end

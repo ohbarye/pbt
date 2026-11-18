@@ -99,9 +99,9 @@ module Pbt
       # @return [void]
       def run_it_in_sequential(property, runner)
         runner.each_with_index do |val, index|
-          c = Case.new(val:, index:)
+          c = build_case(val, index)
           begin
-            property.run(val)
+            property.run(c.val)
             runner.handle_result(c)
           # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
           rescue Exception => e # standard:disable Lint/RescueException:
@@ -117,7 +117,9 @@ module Pbt
       # @return [void]
       def run_it_in_ractors(property, runner)
         runner.map.with_index { |val, index|
-          Case.new(val:, index:, ractor: property.run_in_ractor(val))
+          c = build_case(val, index)
+          c.ractor = property.run_in_ractor(c.val)
+          c
         }.each do |c|
           wait_ractor_result(c.ractor)
           runner.handle_result(c)
@@ -125,6 +127,14 @@ module Pbt
           c.exception = unwrap_ractor_exception(e)
           runner.handle_result(c)
           break # Ignore the rest of the cases. Just pick up the first failure.
+        end
+      end
+
+      def build_case(value, index)
+        if value.is_a?(Arbitrary::Sample)
+          Case.new(val: value.value, sample: value, index: index)
+        else
+          Case.new(val: value, index: index)
         end
       end
 
