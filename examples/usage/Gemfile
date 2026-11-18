@@ -1,0 +1,5 @@
+source "https://rubygems.org"
+gem "pbt", path: "../.."
+gem "factory_bot", "~> 6.5"
+gem "faker", "~> 3.5"
+gem "rspec", "~> 3.13"
