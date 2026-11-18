@@ -40,6 +40,9 @@ Of course you can install with `gem install pbt`.
 
 ## Basic Usage
 
+The v1 DSL uses `Pbt.assert { Pbt.property(...) { ... } }`. See the
+[DSL contract and examples](docs/property-dsl.md) for argument forms and failure semantics.
+
 ### Simple property
 
 ```ruby
@@ -424,7 +427,7 @@ Once this project finishes the following, we will release v1.0.0.
   - It'd be so hard to pass assertions like `expect`, `assert` to a Ractor.
 - [ ] Implement frequency arbitrary
 - [ ] Statistics feature to aggregate generated values
-- [ ] Decide DSL
+- [x] Decide DSL (keep the explicit `Pbt.assert` / `Pbt.property` composition)
 - [ ] Try Fiber
 - [x] Stateful property-based testing (via `Pbt.stateful`)
 
