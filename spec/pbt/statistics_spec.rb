@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "open3"
+require "rbconfig"
+
 RSpec.describe "Pbt.statistics" do
   it "counts generated values and exposes replay information" do
     result = Pbt.statistics(Pbt.constant(:ok), num_runs: 4, seed: 12)
@@ -70,12 +73,15 @@ RSpec.describe "Pbt.statistics" do
     Pbt.statistics(Pbt.constant(:value), num_runs: 0) { raise "must not classify" }
   end
   it "does not change the global random sequence" do
-    original_seed = srand(1234)
-    expected = rand
-    srand(1234)
-    Pbt.statistics(Pbt.integer, num_runs: 5, seed: 99)
-    expect(rand).to eq(expected)
-  ensure
-    srand(original_seed)
+    script = <<~RUBY
+      require "pbt"
+      srand(1234)
+      expected = rand
+      srand(1234)
+      Pbt.statistics(Pbt.integer, num_runs: 5, seed: 99)
+      abort "global random sequence changed" unless rand == expected
+    RUBY
+    output, status = Open3.capture2e(RbConfig.ruby, "-Ilib", "-e", script)
+    expect(status.success?).to be(true), output
   end
 end
