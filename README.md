@@ -425,7 +425,7 @@ Once this project finishes the following, we will release v1.0.0.
 - [ ] Implement frequency arbitrary
 - [ ] Statistics feature to aggregate generated values
 - [ ] Decide DSL
-- [ ] Try Fiber
+- [x] Try Fiber ([experiment and v1 decision](benchmark/FIBER.md))
 - [x] Stateful property-based testing (via `Pbt.stateful`)
 
 ## Development

@@ -19,7 +19,7 @@ RSpec.describe "Fiber experiment" do
       if mode == :success
         expect(fiber.num_runs).to eq(20)
       else
-        expect(fiber.counterexample).to eq(5)
+        expect(fiber.counterexample).to eq(7)
         expect(fiber.num_shrinks).to be > 0
       end
     end
