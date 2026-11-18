@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+- Add Ruby 4.1.0-preview1 to the CI test matrix.
+- [Breaking change] Drop support for Ruby 3.2 and earlier (EOL). Ruby 3.3 or later is now required.
+
 ## [0.7.0] - 2026-04-04
 
 - [Breaking change] Simplify stateful command protocol: `arguments` must now accept `state` parameter, and `applicable?` must now accept both `state` and `args` parameters

@@ -10,8 +10,7 @@ module Pbt
       ExecutionTreeNode = Struct.new(
         :result,
         :value,
-        :children,
-        keyword_init: true
+        :children
       )
 
       # @param verbose [Boolean] Whether to print verbose output.

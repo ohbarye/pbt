@@ -98,7 +98,7 @@ The codebase uses RSpec for testing and follows these patterns:
 
 ### Important Notes
 
-- Ruby 3.1+ is required due to Ractor usage
+- Ruby 3.3+ is required
 - When using `:ractor` worker, be aware of Ractor limitations (no shared state, limited object sharing)
 - The gem uses Standard Ruby for code style (configured in `.standard.yml`)
-- CI runs tests against Ruby 3.1, 3.2, 3.3, and 3.4
+- CI runs tests against Ruby 3.3, 3.4, 4.0, and 4.1.0-preview1

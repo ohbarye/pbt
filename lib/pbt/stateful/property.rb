@@ -16,7 +16,7 @@ module Pbt
         verify!
       ].freeze
 
-      Step = Struct.new(:command, :args, keyword_init: true) do
+      Step = Struct.new(:command, :args) do
         def inspect
           "#<Pbt::Stateful::Step command=#{command_label}, args=#{args.inspect}>"
         end

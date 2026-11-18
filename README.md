@@ -28,6 +28,8 @@ For a more in-depth understanding of Property-Based Testing, please refer to ext
 
 ## Installation
 
+Ruby 3.3 or later is required. CI tests Ruby 3.3, 3.4, 4.0, and 4.1.0-preview1.
+
 Add this line to your application's Gemfile and run `bundle install`.
 
 ```ruby

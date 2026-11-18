@@ -15,8 +15,7 @@ module Pbt
       :failures,
       :verbose,
       :execution_summary,
-      :run_configuration,
-      keyword_init: true
+      :run_configuration
     )
   end
 end
