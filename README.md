@@ -145,6 +145,11 @@ Pbt.one_of(:a, 1, 0.1).generate                        # => :a or 1 or 0.1
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.
 
+### Integration and data recipes
+
+See [runnable usage recipes](examples/usage/README.md) for FactoryBot and Faker,
+UTF-8 / ISO-8859-1 / Shift_JIS strings, and disjoint integer ranges.
+
 ## Stateful Testing
 
 `Pbt` also provides a stateful property API for model-based / command-based testing.

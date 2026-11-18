@@ -7,3 +7,8 @@ Scripts raise on violated invariants and are exercised by an integration spec us
 - Factory: Plain Ruby User, FactoryBot.build attribute overrides. Faker random generated
   from a PBT-generated seed on every case, restoring prior Faker::Config.random in ensure.
 - Document seed replay, shrinking attributes not models, no DB writes, no random Faker defaults.
+
+Completed: tests committed red c69ae26, implementation and dedicated CI added.
+Verification: full rake 183 examples, 0 failures, Standard passes; optional bundle
+FactoryBot/Faker 2 examples, 0 failures. Independent review clean after adding
+exception-path RNG restoration coverage.

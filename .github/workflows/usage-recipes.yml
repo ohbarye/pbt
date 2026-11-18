@@ -1,0 +1,19 @@
+name: Usage recipes
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  factory_bot:
+    runs-on: ubuntu-latest
+    env:
+      BUNDLE_GEMFILE: examples/usage/Gemfile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ruby/setup-ruby@984c0c890880bbf811283d6f09c4607c62d210a4 # v1.323.0
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+      - run: bundle exec rspec examples/usage/spec/factory_bot_spec.rb
