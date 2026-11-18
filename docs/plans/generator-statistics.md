@@ -8,6 +8,9 @@ seeded RNG, propagate errors and keep each invocation independent. Values or cla
 labels used as Hash keys must be stable (not mutated by later generation).
 
 - [x] Write tests, run red (12 failures, missing API), review contract/tests.
-- [ ] Commit tests before implementation.
-- [ ] Add statistics class and Pbt entry point, docs and full suite/lint.
-- [ ] Independent review, fix/re-review, commit, PR referencing #26.
+- [x] Commit tests before implementation.
+- [x] Add statistics class and Pbt entry point, docs and full suite/lint.
+- [x] Independent review, fix/re-review, commit, PR referencing #26.
+
+Verification: 13 red tests committed 04fb022; full suite 194 examples, 0 failures;
+Standard passes. Independent review clean, including global RNG isolation regression.
