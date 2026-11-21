@@ -11,7 +11,6 @@ This compares the normal sequential runner with the same runner wrapping each
 predicate call in a newly created Fiber. Both use seed 42, the same number of
 cases, and the same CPU / blocking-sleep predicates. The script checks successful
 case counts and measures wall time with a monotonic clock. It installs no scheduler.
-The integration spec separately compares success counts and failure/shrink reports.
 
 ## Decision for v1
 
@@ -81,14 +80,12 @@ exception propagation, server-thread cleanup and refusing to replace an existing
 caller-owned scheduler. Client and server sockets are closed in ensure blocks;
 remaining batch tasks are stopped after failure. Async may log the expected failure
 in the cleanup test. The benchmark owns its scheduler only when none is installed.
-CI runs these optional tests separately on Ruby 3.3 and 4.0.
 
 ### Decision after both experiments
 
 Keep the existing public workers for v1. The scheduled experiment calls generated
 properties directly; it does not integrate with `Pbt.check`, its early-failure
-ordering, cancellation policy, shrinking, reports or Ractor worker. The baseline
-spec's report parity does not establish report parity for concurrent Async tasks.
+ordering, cancellation policy, shrinking, reports or Ractor worker. Concurrent failure/shrink/report parity is outside this experiment.
 
 Scheduler-backed execution can help IO-heavy properties, but adoption needs a
 separate design for in-flight case cleanup, failure ordering, exception propagation,
