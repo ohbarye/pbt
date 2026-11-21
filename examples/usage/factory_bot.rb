@@ -5,7 +5,7 @@ require "factory_bot"
 require "faker"
 
 module UsageRecipe
-  User = Struct.new(:age, :name, keyword_init: true)
+  User = Struct.new(:age, :name)
 
   FactoryBot.define do
     factory :pbt_recipe_user, class: "UsageRecipe::User" do

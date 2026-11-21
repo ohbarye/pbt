@@ -20,6 +20,15 @@ module Pbt
         @arb.generate(rng)
       end
 
+      # @private Generate with provenance only when a composite needs it.
+      def generate_for_check(rng)
+        if Arbitrary::Sample.contextual?(@arb)
+          Arbitrary::Sample.capture(@arb, rng)
+        else
+          generate(rng)
+        end
+      end
+
       # Shrink the `val` to a smaller one.
       # This is used to find the smallest failing case after a failure.
       #

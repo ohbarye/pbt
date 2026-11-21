@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "pbt/arbitrary/sample"
+
 module Pbt
   module Arbitrary
     class EmptyDomainError < ArgumentError; end
@@ -25,6 +27,18 @@ module Pbt
       # @return [Enumerator<Object>]
       def shrink(current)
         raise NotImplementedError
+      end
+
+      # Generate a value together with lazy shrinking provenance.
+      # @return [Sample]
+      def sample(rng = Random.new)
+        Sample.from_value(self, generate(rng))
+      end
+
+      # Whether property execution must retain a per-value shrink tree.
+      # @private
+      def contextual?
+        false
       end
 
       # Create another arbitrary by applying `mapper` value by value.

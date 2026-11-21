@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "pbt/version"
+require_relative "pbt/statistics"
 require_relative "pbt/arbitrary/arbitrary_methods"
 require_relative "pbt/check/runner_methods"
 require_relative "pbt/check/property"
@@ -66,6 +67,13 @@ module Pbt
   # @return [Pbt::Stateful::Property]
   def self.stateful(model:, sut:, max_steps: 20)
     Stateful::Property.new(model:, sut:, max_steps:)
+  end
+
+  # Inspect an independent sample of generated values, optionally grouped by a classifier.
+  # Values/labels used as Hash keys must not be mutated during or after sampling.
+  # @return [Statistics] Counts, percentages and the seed used for replay.
+  def self.statistics(arbitrary, num_runs: 100, seed: Random.new_seed, &classifier)
+    Statistics.new(arbitrary, num_runs: num_runs, seed: seed, &classifier)
   end
 
   class << self

@@ -25,6 +25,15 @@ module Pbt
         length.times.map { @value_arb.generate(rng) }
       end
 
+      def contextual?
+        Sample.contextual?(@value_arb)
+      end
+
+      def sample(rng = Random.new)
+        samples = Array.new(@length_arb.generate(rng)) { Sample.capture(@value_arb, rng) }
+        Sample.array(samples, @length_arb, @min_length)
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         return Enumerator.new { |_| } if current.size == @min_length

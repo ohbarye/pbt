@@ -150,6 +150,50 @@ See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrar
 See [runnable usage recipes](examples/usage/README.md) for FactoryBot and Faker,
 UTF-8 / ISO-8859-1 / Shift_JIS strings, and disjoint integer ranges.
 
+### Weighted generators
+
+Use `Pbt.frequency` to select generators by relative nonnegative integer weights:
+
+```ruby
+Pbt.assert(seed: 42) do
+  Pbt.property(Pbt.frequency([3, Pbt.integer], [1, Pbt.constant(nil)])) do |value|
+    raise "unexpected value" unless value.nil? || value.is_a?(Integer)
+  end
+end
+```
+
+At least one weight must be positive. Zero-weight generators are never selected.
+Normal property execution retains the selected generator's shrink tree, including
+inside arrays, tuples, fixed hashes, maps and filters. Shrinking stays within that
+branch. Generated values and reported counterexamples remain ordinary Ruby values.
+
+For manual shrinking, retain a sample: `sample = arb.sample(Random.new(42))`,
+then inspect `sample.value` and `sample.shrink.map(&:value)`. Calling
+`arb.shrink(value)` directly on a frequency generator returns no candidates because
+a bare value cannot identify its source generator. Stateful command arguments use
+the plain-value protocol, so frequency branches there do not shrink their arguments.
+
+### Generator statistics
+
+Inspect generated values before running a property:
+
+```ruby
+stats = Pbt.statistics(Pbt.integer, num_runs: 1000, seed: 42) do |number|
+  number.negative? ? :negative : :nonnegative
+end
+stats.counts      # => counts grouped by label
+stats.percentages # => unrounded percentages grouped by label
+stats.seed        # => 42; reuse this seed to replay the sample
+```
+
+Without a block, actual generated values are counted. Each call generates exactly
+`num_runs` values using its own seeded RNG; it does not execute a property or shrink
+values. The default is 100 runs with a fresh seed, retained in the result. Zero runs
+return empty counts and percentages. Counts are a mutable Hash local to the result;
+values or labels used as its keys must remain stable. For generators that reuse mutable
+objects, return a stable label from the block (for example, a symbol or integer).
+Generator and classifier errors propagate to the caller.
+
 ## Stateful Testing
 
 `Pbt` also provides a stateful property API for model-based / command-based testing.
@@ -427,8 +471,8 @@ Once this project finishes the following, we will release v1.0.0.
 - [x] Rich report by verbose mode
 - [x] (Partially) Allow to use expectations and matchers provided by test framework in Ractor. (dropped)
   - It'd be so hard to pass assertions like `expect`, `assert` to a Ractor.
-- [ ] Implement frequency arbitrary
-- [ ] Statistics feature to aggregate generated values
+- [x] Implement frequency arbitrary
+- [x] Statistics feature to aggregate generated values
 - [ ] Decide DSL
 - [ ] Try Fiber
 - [x] Stateful property-based testing (via `Pbt.stateful`)
