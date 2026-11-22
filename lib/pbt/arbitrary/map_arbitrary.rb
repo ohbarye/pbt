@@ -7,13 +7,15 @@ module Pbt
       # @param arb [Arbitrary] Arbitrary to generate values to be mapped.
       # @param mapper [Proc] Proc to map generated values. Mainly used for generation.
       # @param unmapper [Proc, nil] Optional proc to unmap generated values for bare `#shrink`.
-      def initialize(arb, mapper, unmapper = nil)
+      # @param bijective [Boolean] Internal flag indicating `mapper`/`unmapper` form a bijection on the codomain.
+      def initialize(arb, mapper, unmapper = nil, bijective: false)
         raise ArgumentError, "mapper must be callable" unless mapper.respond_to?(:call)
         raise ArgumentError, "unmapper must be callable or nil" if !unmapper.nil? && !unmapper.respond_to?(:call)
 
         @arb = arb
         @mapper = mapper
         @unmapper = unmapper
+        @bijective = bijective
       end
 
       # @see Arbitrary#generate
@@ -35,11 +37,20 @@ module Pbt
       def cover?(value)
         return nil if @unmapper.nil?
 
-        unmapped = @unmapper.call(value)
-        return false unless @mapper.call(unmapped) == value
+        unmapped, mapped = begin
+          u = @unmapper.call(value)
+          [u, @mapper.call(u)]
+        rescue
+          return nil
+        end
 
-        @arb.respond_to?(:cover?) ? @arb.cover?(unmapped) : nil
-      rescue
+        round_trip = mapped.equal?(value) || mapped.eql?(value)
+        return @bijective ? false : nil unless round_trip
+
+        inner = Arbitrary.cover_result(@arb, unmapped)
+        return true if inner == true
+        return false if @bijective && inner == false
+
         nil
       end
 

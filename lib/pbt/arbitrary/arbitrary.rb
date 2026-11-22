@@ -29,6 +29,16 @@ module Pbt
         raise NotImplementedError
       end
 
+      # Normalize an arbitrary's 3-valued `cover?` result to `true`, `false`, or `nil`.
+      #
+      # @private
+      def self.cover_result(arbitrary, value)
+        return nil unless arbitrary.respond_to?(:cover?)
+
+        result = arbitrary.cover?(value)
+        (result == true || result == false) ? result : nil
+      end
+
       # Check whether `value` belongs to this arbitrary's domain.
       # Returns `true` if confirmed inside, `false` if confirmed outside,
       # or `nil` if membership cannot be determined reliably (e.g. custom arbitraries).

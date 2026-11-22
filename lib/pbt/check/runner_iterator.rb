@@ -44,6 +44,7 @@ module Pbt
       # When a test fails with an accepted failure, it records the failure, sets up the next shrink values,
       # and returns true. When a shrink candidate fails with an unrelated error according to `property#same_failure?`,
       # it is ignored and returns false so shrinking continues on the current level.
+      # Properties implementing `shrink_case(c)` must return an `Enumerator` (since `#has_next?` calls `#peek`).
       #
       # @param c [Case]
       # @return [Boolean] whether the failure was accepted

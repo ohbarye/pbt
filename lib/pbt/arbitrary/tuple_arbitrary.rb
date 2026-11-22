@@ -28,7 +28,7 @@ module Pbt
 
         unknown = false
         @arbs.each_with_index do |arb, idx|
-          covered = arb.respond_to?(:cover?) ? arb.cover?(value[idx]) : nil
+          covered = Arbitrary.cover_result(arb, value[idx])
           return false if covered == false
 
           unknown = true if covered.nil?

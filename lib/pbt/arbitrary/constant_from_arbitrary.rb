@@ -19,7 +19,7 @@ module Pbt
 
       # @see Arbitrary#cover?
       def cover?(value)
-        @choices.include?(value)
+        @choices.any? { |choice| choice.equal?(value) || choice.eql?(value) }
       end
 
       # @see Arbitrary#shrink

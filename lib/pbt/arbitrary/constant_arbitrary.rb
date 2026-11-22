@@ -16,7 +16,7 @@ module Pbt
 
       # @see Arbitrary#cover?
       def cover?(value)
-        value == @val
+        value.equal?(@val) || @val.eql?(value)
       end
 
       # @see Arbitrary#shrink

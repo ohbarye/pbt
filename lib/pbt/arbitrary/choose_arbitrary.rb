@@ -12,14 +12,20 @@ module Pbt
       # @see Arbitrary#generate
       def generate(rng = Random.new)
         rng.rand(@range)
+      rescue ArgumentError => e
+        raise EmptyDomainError, e.message if empty_range?
+
+        raise
       end
 
       # @see Arbitrary#cover?
       def cover?(value)
+        return false if @range.begin.nil? || @range.end.nil?
+
         if integer_range?
           return false unless value.is_a?(Integer)
-        elsif !value.is_a?(Numeric)
-          return false
+        else
+          return false unless value.is_a?(Float) && value.finite?
         end
 
         @range.cover?(value)
@@ -35,7 +41,11 @@ module Pbt
       private
 
       def integer_range?
-        @range.begin.is_a?(Integer) && (@range.end.nil? || @range.end.is_a?(Integer))
+        @range.begin.is_a?(Integer) && @range.end.is_a?(Integer)
+      end
+
+      def empty_range?
+        !@range.begin.nil? && !@range.end.nil? && !@range.cover?(@range.begin)
       end
     end
   end

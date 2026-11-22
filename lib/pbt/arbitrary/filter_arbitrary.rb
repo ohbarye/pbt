@@ -32,14 +32,16 @@ module Pbt
 
       # @see Arbitrary#cover?
       def cover?(value)
-        base = @arb.respond_to?(:cover?) ? @arb.cover?(value) : nil
+        base = Arbitrary.cover_result(@arb, value)
         return false if base == false
 
-        return false unless @refinement.call(value)
+        passed = begin
+          !!@refinement.call(value)
+        rescue
+          return nil
+        end
 
-        base
-      rescue
-        nil
+        passed ? base : false
       end
 
       # @see Arbitrary#shrink

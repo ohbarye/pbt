@@ -33,7 +33,7 @@ module Pbt
       def cover?(value)
         unknown = false
         @choices.each do |_weight, arb|
-          covered = arb.respond_to?(:cover?) ? arb.cover?(value) : nil
+          covered = Arbitrary.cover_result(arb, value)
           return true if covered == true
 
           unknown = true if covered.nil?

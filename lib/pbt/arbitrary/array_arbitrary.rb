@@ -42,7 +42,7 @@ module Pbt
 
         unknown = false
         value.each do |item|
-          covered = @value_arb.respond_to?(:cover?) ? @value_arb.cover?(item) : nil
+          covered = Arbitrary.cover_result(@value_arb, item)
           return false if covered == false
 
           unknown = true if covered.nil?

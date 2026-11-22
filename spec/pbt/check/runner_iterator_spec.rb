@@ -70,5 +70,34 @@ RSpec.describe Pbt::Check::RunnerIterator do
       expect(result.error_instance).to be_a(expected_error)
       expect(result.num_shrinks).to eq(0)
     end
+
+    it "also respects same_failure? under :ractor worker" do
+      property = Object.new
+      property.define_singleton_method(:generate) { |_rng| 10 }
+      property.define_singleton_method(:shrink) do |val|
+        case val
+        when 10 then [5, 2, 1].each
+        when 2 then [1].each
+        else [].each
+        end
+      end
+      property.define_singleton_method(:same_failure?) do |initial, candidate|
+        initial.instance_of?(candidate.class)
+      end
+      property.define_singleton_method(:run_in_ractor) do |val|
+        Ractor.new(val) do |v|
+          raise ArgumentError, "different bug" if v == 5
+          raise "target bug" if v >= 2
+        end
+      end
+
+      result = Pbt.check(num_runs: 1, seed: 1, worker: :ractor) { property }
+
+      expect(result.failed).to be(true)
+      expect(result.counterexample).to eq(2)
+      expect(result.error_instance).to be_a(RuntimeError)
+      expect(result.num_shrinks).to eq(1)
+      expect(result.counterexample_path).to eq("0:1")
+    end
   end
 end

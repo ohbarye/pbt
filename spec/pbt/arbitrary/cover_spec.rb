@@ -25,10 +25,25 @@ RSpec.describe "Arbitrary#cover?" do
     obj
   end
 
+  let(:non_boolean_cover_arb) do
+    Class.new(Pbt::Arbitrary::Arbitrary) do
+      def generate(_rng = Random.new) = 1
+      def shrink(_current) = [].each
+      def cover?(_value) = :yes
+    end.new
+  end
+
   describe "base Arbitrary" do
     it "returns nil by default" do
       expect(unknown_arb.cover?(123)).to be_nil
       expect(unknown_arb.cover?(:custom)).to be_nil
+    end
+
+    it "normalizes non-boolean custom cover? results to nil consistently across composites" do
+      expect(Pbt.tuple(non_boolean_cover_arb).cover?([1])).to be_nil
+      expect(Pbt.array(non_boolean_cover_arb, min: 1, max: 2).cover?([1])).to be_nil
+      expect(Pbt.one_of(non_boolean_cover_arb).cover?(1)).to be_nil
+      expect(Pbt.frequency([1, non_boolean_cover_arb]).cover?(1)).to be_nil
     end
   end
 
@@ -44,11 +59,12 @@ RSpec.describe "Arbitrary#cover?" do
       expect(arb.cover?("1")).to be(false)
     end
 
-    it "handles unbounded nat" do
-      arb = Pbt.nat
+    it "checks nat with explicit max" do
+      arb = Pbt.nat(max: 100)
       expect(arb.cover?(0)).to be(true)
-      expect(arb.cover?(10**12)).to be(true)
+      expect(arb.cover?(100)).to be(true)
       expect(arb.cover?(-1)).to be(false)
+      expect(arb.cover?(101)).to be(false)
     end
   end
 
@@ -67,27 +83,46 @@ RSpec.describe "Arbitrary#cover?" do
       expect(exclusive.cover?(5)).to be(false)
     end
 
-    it "supports float ranges" do
-      arb = Pbt.choose(0.0..1.0)
-      expect(arb.cover?(0.5)).to be(true)
-      expect(arb.cover?(1.5)).to be(false)
-      expect(arb.cover?("0.5")).to be(false)
+    it "supports float ranges strictly for finite Float values" do
+      arb = Pbt.choose(1.0..2.0)
+      expect(arb.cover?(1.5)).to be(true)
+      expect(arb.cover?(1)).to be(false)
+      expect(arb.cover?(Rational(3, 2))).to be(false)
+      expect(arb.cover?(Float::NAN)).to be(false)
+      expect(arb.cover?("1.5")).to be(false)
+    end
+
+    it "rejects unbounded ranges and raises EmptyDomainError on empty ranges during generate" do
+      expect(Pbt.choose(0..).cover?(0)).to be(false)
+      expect(Pbt.choose(..10).cover?(5)).to be(false)
+      expect(Pbt.choose(2..1).cover?(1)).to be(false)
+      expect { Pbt.choose(2..1).generate(Random.new) }.to raise_error(Pbt::Arbitrary::EmptyDomainError)
+      expect { Pbt.choose(1...1).generate(Random.new) }.to raise_error(Pbt::Arbitrary::EmptyDomainError)
     end
   end
 
   describe "ConstantArbitrary and ConstantFromArbitrary" do
-    it "checks equality for ConstantArbitrary" do
+    it "checks type-preserving equality and handles NaN for ConstantArbitrary" do
       expect(Pbt.constant(42).cover?(42)).to be(true)
+      expect(Pbt.constant(42).cover?(42.0)).to be(false)
       expect(Pbt.constant(42).cover?(43)).to be(false)
       expect(Pbt.nil.cover?(nil)).to be(true)
       expect(Pbt.nil.cover?(false)).to be(false)
+
+      nan_arb = Pbt.constant(Float::NAN)
+      expect(nan_arb.cover?(nan_arb.generate)).to be(true)
     end
 
-    it "checks membership for ConstantFromArbitrary" do
-      arb = Pbt.constant_from(:a, :b, nil)
+    it "checks type-preserving membership for ConstantFromArbitrary" do
+      arb = Pbt.constant_from(:a, 1, nil)
       expect(arb.cover?(:a)).to be(true)
+      expect(arb.cover?(1)).to be(true)
+      expect(arb.cover?(1.0)).to be(false)
       expect(arb.cover?(nil)).to be(true)
       expect(arb.cover?(:c)).to be(false)
+
+      nan_arb = Pbt.constant_from(Float::NAN)
+      expect(nan_arb.cover?(nan_arb.generate)).to be(true)
     end
   end
 
@@ -184,12 +219,19 @@ RSpec.describe "Arbitrary#cover?" do
       expect(arb.cover?("anything")).to be_nil
     end
 
-    it "validates round-trip and base domain when unmapper is provided" do
+    it "is conservative (returns true on verified preimage, nil otherwise) for user maps" do
       arb = Pbt.integer(min: 0, max: 10).map(->(n) { n.to_s }, ->(s) { s.to_i })
       expect(arb.cover?("5")).to be(true)
-      expect(arb.cover?("99")).to be(false)
-      expect(arb.cover?("abc")).to be(false)
-      expect(arb.cover?(5)).to be(false)
+      expect(arb.cover?("99")).to be_nil
+      expect(arb.cover?("abc")).to be_nil
+      expect(arb.cover?(5)).to be_nil
+
+      # Non-invertible shrink unmapper must never falsely reject a valid generated value.
+      shifted = Pbt.integer(min: 0, max: 10).map(->(n) { (n + 1).to_s }, ->(s) { s.to_i })
+      expect(shifted.cover?("3")).to be_nil
+
+      abs_arb = Pbt.integer(min: -10, max: -1).map(->(n) { n.abs }, ->(n) { n })
+      expect(abs_arb.cover?(5)).to be_nil
     end
 
     it "rescues unmapper errors and returns nil" do
@@ -197,13 +239,32 @@ RSpec.describe "Arbitrary#cover?" do
       expect(arb.cover?("abc")).to be_nil
     end
 
-    it "works accurately for derived built-in arbitraries" do
-      expect(Pbt.float.cover?(1.5)).to be(true)
+    it "works soundly for FloatArbitrary" do
       expect(Pbt.float.cover?(0.0)).to be(true)
+      expect(Pbt.float.cover?(1.5)).to be_nil
+      expect(Pbt.float.cover?(1_000_001.0)).to be(false)
+      expect(Pbt.float.cover?(Float::MIN)).to be(false)
       expect(Pbt.float.cover?(Float::NAN)).to be(false)
       expect(Pbt.float.cover?(Float::INFINITY)).to be(false)
       expect(Pbt.float.cover?("1.5")).to be(false)
+    end
 
+    it "never rejects values generated by set or hash even when deduplication shrinks size below min" do
+      set_arb = Pbt.set(Pbt.constant(1), min: 2, max: 2)
+      generated_set = set_arb.generate(Random.new(1))
+      expect(generated_set).to eq(Set[1])
+      expect(set_arb.cover?(generated_set)).not_to be(false)
+
+      hash_arb = Pbt.hash(Pbt.constant(:k), Pbt.constant(1), min: 2, max: 2)
+      generated_hash = hash_arb.generate(Random.new(1))
+      expect(generated_hash).to eq({k: 1})
+      expect(hash_arb.cover?(generated_hash)).not_to be(false)
+
+      expect(Pbt.set(Pbt.integer(min: 1, max: 5)).cover?(Set[1, 2])).to be(true)
+      expect(Pbt.hash(Pbt.symbol, Pbt.integer(min: 1, max: 5)).cover?({a: 1})).to be(true)
+    end
+
+    it "works accurately for bijective derived built-in arbitraries" do
       expect(Pbt.char.cover?("a")).to be(true)
       expect(Pbt.char.cover?("ab")).to be(false)
 
@@ -214,14 +275,6 @@ RSpec.describe "Arbitrary#cover?" do
       expect(Pbt.hexa_string(min: 1, max: 3).cover?("a1f")).to be(true)
       expect(Pbt.hexa_string(min: 1, max: 3).cover?("xyz")).to be(false)
       expect(Pbt.hexa_string(min: 1, max: 3).cover?("")).to be(false)
-
-      expect(Pbt.set(Pbt.integer(min: 1, max: 5)).cover?(Set[1, 2])).to be(true)
-      expect(Pbt.set(Pbt.integer(min: 1, max: 5)).cover?(Set[1, 9])).to be(false)
-      expect(Pbt.set(Pbt.integer(min: 1, max: 5)).cover?([1, 2])).to be(false)
-
-      expect(Pbt.hash(Pbt.symbol, Pbt.integer(min: 1, max: 5)).cover?({a: 1})).to be(true)
-      expect(Pbt.hash(Pbt.symbol, Pbt.integer(min: 1, max: 5)).cover?({a: 9})).to be(false)
-      expect(Pbt.hash(Pbt.symbol, Pbt.integer(min: 1, max: 5)).cover?([[:a, 1]])).to be(false)
 
       base_date = Date.new(2024, 4, 6)
       date_arb = Pbt.date(base_date: base_date, past_offset_days: -5, future_offset_days: 5)
