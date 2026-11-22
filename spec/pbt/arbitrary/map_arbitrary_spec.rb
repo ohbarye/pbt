@@ -97,6 +97,25 @@ RSpec.describe Pbt::Arbitrary::MapArbitrary do
       expect(sample.shrink.map(&:value)).to eq([{label: "v3"}, {label: "v1"}])
     end
 
+    it "supports non-Proc callable objects in sample and Pbt.check" do
+      callable = Class.new do
+        def call(n)
+          "num:#{n}"
+        end
+      end.new
+
+      arb = Pbt.integer(min: 0, max: 100).map(callable)
+      result = Pbt.check(seed: 42, num_runs: 50, worker: :none) do
+        Pbt.property(arb) do |label|
+          raise "too big" if label.delete_prefix("num:").to_i >= 10
+        end
+      end
+
+      expect(result.failed).to be(true)
+      expect(result.counterexample).to start_with("num:")
+      expect(result.num_shrinks).to be > 0
+    end
+
     it "shrinks failures in Pbt.check under both :none and :ractor workers" do
       baseline = Pbt.check(seed: 42, num_runs: 50, worker: :none) do
         Pbt.property(Pbt.integer(min: 0, max: 100)) do |n|

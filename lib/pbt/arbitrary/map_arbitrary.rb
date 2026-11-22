@@ -28,7 +28,7 @@ module Pbt
 
       # @see Arbitrary#sample
       def sample(rng = Random.new)
-        Sample.capture(@arb, rng).map(&@mapper)
+        Sample.capture(@arb, rng).map { |value| @mapper.call(value) }
       end
 
       # @see Arbitrary#shrink
