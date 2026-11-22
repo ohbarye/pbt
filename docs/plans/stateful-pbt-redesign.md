@@ -254,7 +254,7 @@ For each case:
    - Loop up to a bounded per-step attempt budget (e.g., `32` attempts):
      - Pick an eligible command weighted by `weight:` using `rng`.
      - Evaluate `arb = command.arguments_for(state)` (validate `generate`/`shrink` protocol; catch `Pbt::Arbitrary::EmptyDomainError` and mark that command ineligible for this state).
-     - Capture `sample = Arbitrary::Sample.capture(arb, rng)` (note: `FilterArbitrary` can loop indefinitely if its predicate is unsatisfiable — document preferring state-bounded generators over heavy `.filter`).
+     - Capture `sample = Arbitrary::Sample.capture(arb, rng)` (note: `FilterArbitrary` raises `Pbt::Arbitrary::FilterExhaustedError` if its predicate cannot be satisfied within `max_attempts` — prefer state-bounded generators over heavy `.filter`).
      - Check `command.precondition(state, sample.value)`. If true, create `step_id = next_id`, `ref = Ref.new(step_id: step_id)`, compute `next_state = deep_freeze(command.next_state(state, sample.value, ref))`, append `Step.new(id: step_id, command: command.name, args: sample.value)`, record `step_samples[step_id] = sample`, and advance `state = next_state`.
    - If eligible commands exist but all attempts are exhausted, raise `Pbt::Stateful::GenerationError` with step index and eligible command names.
 
