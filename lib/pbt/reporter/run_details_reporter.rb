@@ -15,6 +15,10 @@ module Pbt
       # @raise [PropertyFailure]
       def report_run_details
         if @run_details.failed
+          if @run_details.error_instance.is_a?(TooManySkipsError)
+            raise TooManySkipsError, format_too_many_skips_message
+          end
+
           message = []
           message << format_error_message
           message << error_backtrace
@@ -27,6 +31,15 @@ module Pbt
       end
 
       private
+
+      # @return [String]
+      def format_too_many_skips_message
+        <<~MSG.chomp
+          #{@run_details.error_message}
+            seed: #{@run_details.seed}
+            Consider narrowing your arbitrary instead of relying heavily on Pbt.assume.
+        MSG
+      end
 
       # @return [String]
       def format_error_message

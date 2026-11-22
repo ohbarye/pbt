@@ -66,7 +66,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :ractor,
                 num_runs: 5,
                 seed: anything,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                max_skips: nil
               }
             )
           end
@@ -100,7 +101,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :ractor,
                 num_runs: 10,
                 seed:,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                max_skips: nil
               }
             )
           end
@@ -130,7 +132,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :none,
                 num_runs: 5,
                 seed: anything,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                max_skips: nil
               }
             )
           end
@@ -164,7 +167,8 @@ RSpec.describe Pbt::Check::Configuration do
                 worker: :none,
                 num_runs: 10,
                 seed:,
-                thread_report_on_exception: false
+                thread_report_on_exception: false,
+                max_skips: nil
               }
             )
           end

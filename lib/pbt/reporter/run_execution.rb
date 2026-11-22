@@ -6,6 +6,8 @@ module Pbt
   module Reporter
     # Represents the result of a single run of a property test.
     class RunExecution
+      attr_reader :num_successes, :num_skips
+
       # A tree node of the execution for verbose output.
       ExecutionTreeNode = Struct.new(
         :result,
@@ -18,8 +20,11 @@ module Pbt
         @verbose = verbose
         @path_to_failure = []
         @failure = nil
+        @too_many_skips_error = nil
         @failures = []
         @num_successes = 0
+        @num_skips = 0
+        @num_runs_on_failure = nil
         @root_execution_trees = []
         @current_level_execution_trees = @root_execution_trees
       end
@@ -28,6 +33,7 @@ module Pbt
       #
       # @param c [Pbt::Check::Case]
       def record_failure(c)
+        @num_runs_on_failure ||= @num_successes + 1
         if @verbose
           current_tree = append_execution_tree_node(:failure, c.val)
           @current_level_execution_trees = current_tree.children
@@ -51,11 +57,31 @@ module Pbt
         @num_successes += 1
       end
 
+      # Record a skipped initial run (from `Pbt.assume`).
+      #
+      # @return [void]
+      def record_skip
+        @num_skips += 1
+      end
+
+      # Record a failure caused by exceeding `max_skips`.
+      #
+      # @param error [Pbt::TooManySkipsError]
+      # @return [void]
+      def record_too_many_skips(error)
+        @too_many_skips_error = error
+      end
+
+      # @return [Boolean]
+      def too_many_skips?
+        !@too_many_skips_error.nil?
+      end
+
       # Whether the test was successful.
       #
       # @return [Boolean]
       def success?
-        !@failure
+        !@failure && !@too_many_skips_error
       end
 
       # Convert execution to run details.
@@ -67,6 +93,7 @@ module Pbt
           RunDetails.new(
             failed: false,
             num_runs: @num_successes,
+            num_skips: @num_skips,
             num_shrinks: 0,
             seed: config[:seed],
             counterexample: nil,
@@ -78,10 +105,27 @@ module Pbt
             execution_summary: @root_execution_trees,
             run_configuration: config
           )
+        elsif @too_many_skips_error
+          RunDetails.new(
+            failed: true,
+            num_runs: @num_successes,
+            num_skips: @num_skips,
+            num_shrinks: 0,
+            seed: config[:seed],
+            counterexample: nil,
+            counterexample_path: nil,
+            error_message: @too_many_skips_error.message,
+            error_instance: @too_many_skips_error,
+            failures: @failures,
+            verbose: @verbose,
+            execution_summary: @root_execution_trees,
+            run_configuration: config
+          )
         else
           RunDetails.new(
             failed: true,
-            num_runs: @path_to_failure[0] + 1,
+            num_runs: @num_runs_on_failure,
+            num_skips: @num_skips,
             num_shrinks: @path_to_failure.size - 1,
             seed: config[:seed],
             counterexample: @value,

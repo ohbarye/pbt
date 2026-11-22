@@ -6,6 +6,7 @@ module Pbt
     RunDetails = Struct.new(
       :failed,
       :num_runs,
+      :num_skips,
       :num_shrinks,
       :seed,
       :counterexample,

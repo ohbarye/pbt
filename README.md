@@ -81,7 +81,22 @@ The above snippet is very simple but contains the basic components.
 
 `Pbt.assert` is the primary runner. It executes the property returned by the block multiple times, shrinks any failure, and raises `Pbt::PropertyFailure` with reproduction details.
 
-If you want to inspect predicate failures without raising `Pbt::PropertyFailure`, use `Pbt.check`, which returns a `Pbt::Reporter::RunDetails` struct (`failed`, `num_runs`, `num_shrinks`, `seed`, `counterexample`, `counterexample_path`, `error_message`, `error_instance`, `failures`, `verbose`, `execution_summary`, `run_configuration`). Exceptions raised during property construction or value generation still propagate to the caller.
+If you want to inspect predicate failures without raising `Pbt::PropertyFailure`, use `Pbt.check`, which returns a `Pbt::Reporter::RunDetails` struct (`failed`, `num_runs`, `num_skips`, `num_shrinks`, `seed`, `counterexample`, `counterexample_path`, `error_message`, `error_instance`, `failures`, `verbose`, `execution_summary`, `run_configuration`). Exceptions raised during property construction or value generation still propagate to the caller.
+
+#### Preconditions (`Pbt.assume`)
+
+Use `Pbt.assume(condition)` inside a predicate to discard inputs that do not satisfy a precondition instead of returning early (which would count skipped inputs as passed runs):
+
+```ruby
+Pbt.assert do
+  Pbt.property(Pbt.integer, Pbt.integer) do |x, y|
+    Pbt.assume(y != 0)
+    raise "unexpected" unless (x / y) * y + (x % y) == x
+  end
+end
+```
+
+Discarded cases do not count toward `num_runs` and are skipped during shrinking. If skips exceed `max_skips` (default: `num_runs * 10`), `Pbt.assert` raises `Pbt::TooManySkipsError` (`< Pbt::PropertyFailure`). Prefer narrowing your arbitrary when a precondition rejects most inputs.
 
 #### Property (v1 DSL Contract)
 

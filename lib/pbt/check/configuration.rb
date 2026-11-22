@@ -8,19 +8,22 @@ module Pbt
       :worker,
       :num_runs,
       :seed,
-      :thread_report_on_exception
+      :thread_report_on_exception,
+      :max_skips
     ) do
       # @param verbose [Boolean] Whether to print verbose output. Default is `false`.
-      # @param worker [Symbol] The concurrency method to use. :ractor` and `:none` are supported. Default is `:none`.
+      # @param worker [Symbol] The concurrency method to use. `:ractor` and `:none` are supported. Default is `:none`.
       # @param num_runs [Integer] The number of runs to perform. Default is `100`.
       # @param seed [Integer] The seed to use for random number generation. It's useful to reproduce failed test with the seed you'd pick up from failure messages. Default is a random seed.
       # @param thread_report_on_exception [Boolean] Whether to report exceptions in threads. It's useful to suppress error logs on Ractor that reports many errors. Default is `false`.
+      # @param max_skips [Integer, nil] Maximum number of skipped cases allowed via `Pbt.assume`. Defaults to `num_runs * 10` when `nil`.
       def initialize(
         verbose: false,
         worker: :none,
         num_runs: 100,
         seed: Random.new_seed,
-        thread_report_on_exception: false
+        thread_report_on_exception: false,
+        max_skips: nil
       )
         super
       end
