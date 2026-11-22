@@ -41,17 +41,34 @@ module Pbt
         false
       end
 
-      # Create another arbitrary by applying `mapper` value by value.
+      # Create another arbitrary by applying `mapper` (or a block) value by value.
+      # When `unmapper` is omitted, shrinking still works in `Pbt.property` and `sample`
+      # by preserving the underlying arbitrary's shrink tree.
       #
-      # @example
-      #   integer_generator = Pbt.integer
-      #   num_str_generator = integer_generator.map(->(n){ n.to_s }, ->(s) {s.to_i})
+      # @example Block form (no unmapper required)
+      #   Pbt.integer.map { |n| n.to_s }
       #
-      # @param mapper [Proc] Proc to map generated values. Mainly used for generation.
-      # @param unmapper [Proc] Proc to unmap generated values. Used for shrinking.
+      # @example Explicit mapper and unmapper (also supports bare `#shrink`)
+      #   Pbt.integer.map(->(n) { n.to_s }, ->(s) { s.to_i })
+      #
+      # @param mapper [Proc, nil] Proc to map generated values.
+      # @param unmapper [Proc, nil] Optional proc to unmap generated values for bare `#shrink`.
       # @return [MapArbitrary] New arbitrary with mapped elements
-      def map(mapper, unmapper)
-        MapArbitrary.new(self, mapper, unmapper)
+      def map(mapper = nil, unmapper = nil, &block)
+        if mapper && block
+          raise ArgumentError, "map accepts either a mapper argument or a block, not both"
+        end
+
+        resolved_mapper = mapper || block
+        unless resolved_mapper.respond_to?(:call)
+          raise ArgumentError, "map requires a callable mapper or a block"
+        end
+
+        if !unmapper.nil? && !unmapper.respond_to?(:call)
+          raise ArgumentError, "unmapper must be callable or nil"
+        end
+
+        MapArbitrary.new(self, resolved_mapper, unmapper)
       end
 
       # Create another arbitrary by filtering values against `refinement`.

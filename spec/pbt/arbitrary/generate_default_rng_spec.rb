@@ -68,6 +68,11 @@ RSpec.describe "generate with default rng" do
       val = Pbt.integer.map(->(n) { n.to_s }, ->(s) { s.to_i }).generate
       expect(val).to be_a(String)
     end
+
+    it "generates a block-mapped value without rng" do
+      val = Pbt.integer.map { |n| n.to_s }.generate
+      expect(val).to be_a(String)
+    end
   end
 
   describe "backward compatibility" do

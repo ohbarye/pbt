@@ -119,10 +119,7 @@ BankState = Data.define(:balance, :open, :accounts)
 
 Pbt.assert(seed: 42, num_runs: 200) do
   Pbt.stateful(max_steps: 25) do |m|
-    m.initial_state Pbt.integer(min: 0, max: 100).map(
-      ->(b) { BankState.new(balance: b, open: true, accounts: []) },
-      ->(s) { s.balance }
-    )
+    m.initial_state Pbt.integer(min: 0, max: 100).map { |b| BankState.new(balance: b, open: true, accounts: []) }
 
     m.sut { |init| Bank.open(init.balance) }
     m.teardown { |sut| sut.close }
@@ -230,7 +227,7 @@ Built-in implementations:
 - `ArrayArbitrary`: `false` unless `value.is_a?(Array) && value.size.between?(@min_length, @max_length)`; aggregate element `cover?`
 - `FixedHashArbitrary`: `false` unless `value.is_a?(Hash) && value.keys == @hash.keys` (or same key set); aggregate value `cover?`
 - `FilterArbitrary`: combine base `cover?(value)` with `!!@refinement.call(value)` (returning `false` if refinement is falsy)
-- `MapArbitrary`: attempt `@unmapper.call(value)` and delegate to `@arb.cover?(unmapped)`; rescue exceptions and return `nil`
+- `MapArbitrary`: return `nil` if `@unmapper.nil?`; otherwise attempt `@unmapper.call(value)` and delegate to `@arb.cover?(unmapped)`; rescue exceptions and return `nil`
 
 ### 5.2 Separating Pure `Run` from `Sample` Provenance
 
