@@ -77,7 +77,7 @@ RSpec.describe Pbt::Check::Configuration do
             # This seed generates [5, 1, 4] and the 4 fails.
             # Then it shrinks from 4 towards with [3, 2, 1] and finds 2 as the smallest counterexample.
             run_details = Pbt.check num_runs: 10, worker: :ractor, seed: do
-              Pbt.property(Pbt.one_of(1, 2, 3, 4, 5)) do |n|
+              Pbt.property(Pbt.constant_from(1, 2, 3, 4, 5)) do |n|
                 raise "dummy error" if n % 2 == 0
               end
             end
@@ -141,7 +141,7 @@ RSpec.describe Pbt::Check::Configuration do
             # This seed generates [5, 1, 4] and the 4 fails.
             # Then it shrinks from 4 towards with [3, 2, 1] and finds 2 as the smallest counterexample.
             run_details = Pbt.check num_runs: 10, worker: :none, seed: do
-              Pbt.property(Pbt.one_of(1, 2, 3, 4, 5)) do |n|
+              Pbt.property(Pbt.constant_from(1, 2, 3, 4, 5)) do |n|
                 raise "dummy error" if n % 2 == 0
               end
             end

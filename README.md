@@ -140,7 +140,8 @@ Pbt.tuple(Pbt.symbol, Pbt.integer).generate            # => [:atq, 42]
 Pbt.fixed_hash(x: Pbt.symbol, y: Pbt.integer).generate # => {x: :atq, y: 42}
 Pbt.hash(Pbt.symbol, Pbt.integer).generate             # => {atq: 121, ygab: -1142}
 
-Pbt.one_of(:a, 1, 0.1).generate                        # => :a or 1 or 0.1
+Pbt.constant_from(:a, 1, 0.1).generate                 # => :a or 1 or 0.1
+Pbt.one_of(Pbt.integer, Pbt.constant(nil)).generate    # => 42 or nil
 ````
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.

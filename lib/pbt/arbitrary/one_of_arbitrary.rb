@@ -2,27 +2,48 @@
 
 module Pbt
   module Arbitrary
-    # Generates one of the given choices.
+    # Uniformly selects one of the given arbitraries and delegates generation/shrinking to it.
     class OneOfArbitrary < Arbitrary
-      # @param choices [Array] List of choices.
-      def initialize(choices)
-        @choices = choices
-        @idx_arb = IntegerArbitrary.new(0, choices.size - 1)
+      # @param arbitraries [Array<Arbitrary>] Non-empty list of arbitraries to choose from.
+      def initialize(arbitraries)
+        raise ArgumentError, "one_of expects an Array of arbitraries" unless arbitraries.is_a?(Array)
+        raise EmptyDomainError, "one_of requires at least one arbitrary" if arbitraries.empty?
+
+        unless arbitraries.all? { |arb| arb.respond_to?(:generate) && arb.respond_to?(:shrink) }
+          raise ArgumentError, "one_of expects arbitraries (use Pbt.constant_from for constant values)"
+        end
+
+        @arbitraries = arbitraries.dup
       end
 
       # @see Arbitrary#generate
       def generate(rng = Random.new)
-        @choices[@idx_arb.generate(rng)]
+        select(rng).generate(rng)
       end
 
+      # Preserve the selected branch for shrinking, even after subsequent generation.
+      #
+      # @see Arbitrary#sample
+      def sample(rng = Random.new)
+        Sample.capture(select(rng), rng)
+      end
+
+      # @private
+      def contextual?
+        true
+      end
+
+      # A bare value cannot identify its source arbitrary. Use `sample` or `Pbt.property` to shrink.
+      #
       # @see Arbitrary#shrink
-      def shrink(current)
-        # Shrinks to values earlier in the list of `choices`.
-        Enumerator.new do |y|
-          @idx_arb.shrink(@choices.index(current)).map do |idx|
-            y << @choices[idx]
-          end
-        end
+      def shrink(_current)
+        [].each
+      end
+
+      private
+
+      def select(rng)
+        @arbitraries[rng.rand(@arbitraries.size)]
       end
     end
   end
