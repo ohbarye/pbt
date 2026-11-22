@@ -5,10 +5,14 @@ module Pbt
     # Represents a property to be tested.
     # This class holds an arbitrary to generate values and a predicate to test them.
     class Property
-      # @param arb [Array<Arbitrary>]
+      # @param arb [Arbitrary]
+      # @param keyword_args [Boolean] Whether generated Hash values should be splatted as keyword arguments.
+      # @param splat_args [Boolean] Whether generated tuple values should be splatted as positional arguments.
       # @param predicate [Proc] Predicate proc to test the generated values. Library users write this.
-      def initialize(arb, &predicate)
+      def initialize(arb, keyword_args: false, splat_args: false, &predicate)
         @arb = arb
+        @keyword_args = keyword_args
+        @splat_args = splat_args
         @predicate = predicate
       end
 
@@ -43,8 +47,10 @@ module Pbt
       # @param val [Object]
       # @return [void]
       def run(val)
-        if val.is_a?(Hash)
+        if @keyword_args
           @predicate.call(**val)
+        elsif @splat_args
+          @predicate.call(*val)
         else
           @predicate.call(val)
         end
@@ -56,7 +62,11 @@ module Pbt
       # @param val [Object]
       # @return [Ractor]
       def run_in_ractor(val)
-        Ractor.new(val, &@predicate)
+        if @splat_args
+          Ractor.new(*val, &@predicate)
+        else
+          Ractor.new(val, &@predicate)
+        end
       end
     end
   end

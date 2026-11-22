@@ -34,6 +34,40 @@ RSpec.describe Pbt do
         end
       end
 
+      it "passes an empty Hash from a single positional arbitrary as a value, not empty kwargs" do
+        [:none, :ractor].each do |worker|
+          Pbt.assert(worker: worker, num_runs: 3) do
+            Pbt.property(Pbt.constant({}), &->(val) { raise "expected Hash, got #{val.inspect}" unless val == {} })
+          end
+        end
+      end
+
+      it "splats multiple positional arbitraries for strict lambdas under both :none and :ractor" do
+        [:none, :ractor].each do |worker|
+          Pbt.assert(worker: worker, num_runs: 5) do
+            Pbt.property(Pbt.integer, Pbt.integer, &->(x, y) { raise unless x.is_a?(Integer) && y.is_a?(Integer) })
+          end
+        end
+      end
+
+      it "passes keyword arguments to the predicate under default :none worker" do
+        Pbt.assert(worker: :none, num_runs: 10) do
+          Pbt.property(x: Pbt.integer, y: Pbt.integer) do |x:, y:|
+            raise unless x.is_a?(Integer)
+            raise unless y.is_a?(Integer)
+          end
+        end
+      end
+
+      it "does not fail when a predicate merely returns false without raising" do
+        details = Pbt.check(worker: :none, num_runs: 5) do
+          Pbt.property(Pbt.integer) { |_n| false }
+        end
+
+        expect(details.failed).to be(false)
+        expect(details.num_runs).to eq(5)
+      end
+
       it "doesn't allow to use both positional and keyword arguments" do
         expect {
           Pbt.assert do
