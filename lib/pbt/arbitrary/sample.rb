@@ -63,16 +63,25 @@ module Pbt
       def self.array(samples, length_arbitrary, min_length)
         Sample.new(samples.map(&:value)) do
           Enumerator.new do |y|
-            # Match ArrayArbitrary's existing shrink order and minimum-length behavior.
-            next if samples.size == min_length
+            if samples.size > min_length
+              emitted_n_minus_1 = false
+              length_arbitrary.shrink(samples.size).each do |length|
+                emitted_n_minus_1 = true if length == samples.size - 1
+                if length.zero?
+                  y << array([], length_arbitrary, min_length)
+                else
+                  samples.each_cons(length) { |items| y << array(items, length_arbitrary, min_length) }
+                end
+              end
 
-            length_arbitrary.shrink(samples.size).each do |length|
-              if length.zero?
-                y << array([], length_arbitrary, min_length)
-              else
-                samples.each_cons(length) { |items| y << array(items, length_arbitrary, min_length) }
+              if samples.size >= 3
+                indices = emitted_n_minus_1 ? (1...(samples.size - 1)) : (0...samples.size)
+                indices.each do |i|
+                  y << array([*samples[...i], *samples[i + 1..]], length_arbitrary, min_length)
+                end
               end
             end
+
             samples.each_with_index do |sample, index|
               sample.shrink.each do |child|
                 next_samples = samples.dup

@@ -47,6 +47,7 @@ RSpec.describe Pbt::Arbitrary::ArrayArbitrary do
         [7],
         [9],
         [],
+        [13, 9],
         [7, 7, 9],
         [4, 7, 9],
         [2, 7, 9],
@@ -62,6 +63,48 @@ RSpec.describe Pbt::Arbitrary::ArrayArbitrary do
         [13, 7, 1],
         [13, 7, 0]
       ]
+    end
+
+    it "still shrinks elements when array length is already at min_length" do
+      arb = Pbt::Arbitrary::ArrayArbitrary.new(Pbt.integer(min: 0, max: 100), 1, 1)
+      expect(arb.shrink([10]).to_a).to eq [[5], [3], [2], [1], [0]]
+
+      contextual = Pbt.array(Pbt.integer(min: 0, max: 100).map { |n| "item-#{n}" }, min: 1, max: 1)
+      result = Pbt.check(seed: 42, num_runs: 10, worker: :none) do
+        Pbt.property(contextual) do |items|
+          raise "too large" if items.first.delete_prefix("item-").to_i >= 10
+        end
+      end
+
+      expect(result.failed).to be(true)
+      expect(result.num_shrinks).to be > 0
+      expect(result.counterexample.first.delete_prefix("item-").to_i).to be < 51
+    end
+
+    it "shrinks non-contiguous failing pairs by deleting interior elements" do
+      arb = Pbt.array(Pbt.integer(min: 0, max: 10), min: 0, max: 5)
+      expect(arb.shrink([1, 0, 0, 2]).to_a).to include([1, 0, 2])
+      expect(arb.shrink([1, 0, 2]).to_a).to include([1, 2])
+
+      sample = Pbt::Arbitrary::Sample.array(
+        [1, 0, 0, 2].map { |v| Pbt::Arbitrary::Sample.from_value(Pbt.integer(min: 0, max: 10), v) },
+        Pbt::Arbitrary::IntegerArbitrary.new(0, 5),
+        0
+      )
+      expect(sample.shrink.map(&:value)).to include([1, 0, 2])
+
+      # End-to-end: [1, 0, 0, 2] where only pairs containing both 1 and 2 fail shrinks to [1, 2].
+      result = Pbt.check(seed: 1, num_runs: 100, worker: :none) do
+        Pbt.property(Pbt.array(Pbt.integer(min: 0, max: 2), min: 0, max: 5)) do |xs|
+          raise "both present" if xs.include?(1) && xs.include?(2)
+        end
+      end
+      expect(result.failed).to be(true)
+      expect(result.counterexample.sort).to eq([1, 2])
+    end
+
+    it "rejects nil max_length" do
+      expect { Pbt.array(Pbt.integer, max: nil) }.to raise_error(ArgumentError)
     end
 
     context "when current value and target is same" do

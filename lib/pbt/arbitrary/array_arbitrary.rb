@@ -52,22 +52,31 @@ module Pbt
 
       # @see Arbitrary#shrink
       def shrink(current)
-        return Enumerator.new { |_| } if current.size == @min_length
-
         Enumerator.new do |y|
-          # First, shrink the length of the array and try combinations of elements.
-          # But this doesn't try all possible combinations since it'd be too huge and slow.
-          @length_arb.shrink(current.size).each do |length|
-            if length == 0
-              y.yield []
-              next
+          if current.size > @min_length
+            # First, shrink the length of the array via contiguous slices.
+            emitted_n_minus_1 = false
+            @length_arb.shrink(current.size).each do |length|
+              emitted_n_minus_1 = true if length == current.size - 1
+              if length == 0
+                y.yield []
+                next
+              end
+              current.each_cons(length) do |con|
+                y.yield con
+              end
             end
-            current.each_cons(length) do |con|
-              y.yield con
+
+            # Second, try deleting individual elements (including non-contiguous interior elements).
+            if current.size >= 3
+              indices = emitted_n_minus_1 ? (1...(current.size - 1)) : (0...current.size)
+              indices.each do |i|
+                y.yield [*current[...i], *current[i + 1..]]
+              end
             end
           end
 
-          # Second, shrink each element of the array.
+          # Third, shrink each element of the array (even when already at min_length).
           current.each_with_index do |item, i|
             @value_arb.shrink(item).each do |val|
               y.yield [*current[...i], val, *current[i + 1..]]

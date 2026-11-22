@@ -1,6 +1,23 @@
 # frozen_string_literal: true
 
 RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
+  describe ".nat" do
+    it "generates non-negative integers with default max" do
+      aggregate_failures do
+        100.times do
+          val = Pbt.nat.generate(Random.new)
+          expect(val).to be_a(Integer)
+          expect(val).to be >= 0
+          expect(val).to be <= 1_000_000
+        end
+      end
+    end
+
+    it "rejects nil max" do
+      expect { Pbt.nat(max: nil) }.to raise_error(ArgumentError)
+    end
+  end
+
   describe ".hexa" do
     it "generates a hexadecimal character" do
       val = Pbt.hexa.generate(Random.new)
@@ -263,6 +280,7 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
           Set.new([2]),
           Set.new([-4]),
           Set.new([]),
+          Set.new([1, -4]),
           Set.new([0, 2, -4]),
           Set.new([1, -4]),
           Set.new([1, 0, -4]),
@@ -298,6 +316,7 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
           {a: 2, b: 20},
           {a: 1, b: 20},
           {a: 0, b: 20},
+          {a: 20},
           {a: 10, b: 10},
           {a: 10, b: 5},
           {a: 10, b: 3},

@@ -31,7 +31,7 @@ module Pbt
       #
       # @param max [Integer] Upper limit for the generated integers (included).
       # @return [Arbitrary<Integer>]
-      def nat(max: nil)
+      def nat(max: 1_000_000)
         integer(min: 0, max: max)
       end
 

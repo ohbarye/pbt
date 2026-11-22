@@ -10,6 +10,8 @@ module Pbt
       # @param min [Integer] Minimum value to generate.
       # @param max [Integer] Maximum value to generate.
       def initialize(min, max)
+        raise ArgumentError, "min and max cannot be nil" if min.nil? || max.nil?
+
         @min = min
         @max = max
       end
