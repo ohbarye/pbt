@@ -3,6 +3,7 @@
 require "pbt/arbitrary/arbitrary"
 require "pbt/arbitrary/constant"
 require "pbt/arbitrary/constant_arbitrary"
+require "pbt/arbitrary/constant_from_arbitrary"
 require "pbt/arbitrary/array_arbitrary"
 require "pbt/arbitrary/integer_arbitrary"
 require "pbt/arbitrary/tuple_arbitrary"
@@ -69,21 +70,35 @@ module Pbt
 
       # Picks a random integer in the given range.
       #
-      # @see Pbt.one_of
+      # @see Pbt.constant_from
       # @param range [Range<Integer>] Range of integers to choose from.
       # @return [Arbitrary<Integer>]
       def choose(range)
         ChooseArbitrary.new(range)
       end
 
-      # Picks a random element from the given choices.
+      # Picks a random constant value from the given choices.
       # The choices can be of any type.
       #
-      # @see Pbt.one_of
-      # @param choices [Array<Object>] Array of choices.
-      # @return [Arbitrary<Object>]
-      def one_of(*choices)
-        OneOfArbitrary.new(choices)
+      # @example
+      #   Pbt.constant_from(:a, 1, 0.1).generate # => :a or 1 or 0.1
+      #
+      # @param choices [Array<Object>] Non-empty list of constant choices.
+      # @return [ConstantFromArbitrary]
+      def constant_from(*choices)
+        ConstantFromArbitrary.new(choices)
+      end
+
+      # Uniformly selects one of the given arbitraries and generates a value from it.
+      # Shrinks within the selected arbitrary when used with `Pbt.property` or `sample`.
+      #
+      # @example
+      #   Pbt.one_of(Pbt.integer, Pbt.constant(nil))
+      #
+      # @param arbitraries [Array<Arbitrary>] Non-empty list of arbitraries.
+      # @return [OneOfArbitrary]
+      def one_of(*arbitraries)
+        OneOfArbitrary.new(arbitraries)
       end
 
       # Select a generator by relative integer weight. Zero-weight choices are ignored.
@@ -100,7 +115,7 @@ module Pbt
       #
       # @return [Arbitrary<String>]
       def hexa
-        one_of(*HEXA_CHARS)
+        constant_from(*HEXA_CHARS)
       end
 
       # For lowercase hexadecimal strings.
@@ -123,7 +138,7 @@ module Pbt
       #
       # @return [Arbitrary<String>]
       def alphanumeric_char
-        one_of(*ALPHANUMERIC_CHARS)
+        constant_from(*ALPHANUMERIC_CHARS)
       end
 
       # For alphanumeric strings.
@@ -139,7 +154,7 @@ module Pbt
       #
       # @return [Arbitrary<String>]
       def ascii_char
-        one_of(*ASCII_CHARS)
+        constant_from(*ASCII_CHARS)
       end
 
       # For ascii strings.
@@ -155,7 +170,7 @@ module Pbt
       #
       # @return [Arbitrary<String>]
       def printable_ascii_char
-        one_of(*PRINTABLE_ASCII_CHARS)
+        constant_from(*PRINTABLE_ASCII_CHARS)
       end
 
       # For printable ascii strings.
@@ -171,7 +186,7 @@ module Pbt
       #
       # @return [Arbitrary<String>]
       def printable_char
-        one_of(*PRINTABLE_CHARS)
+        constant_from(*PRINTABLE_CHARS)
       end
 
       # For printable strings.
@@ -189,7 +204,7 @@ module Pbt
       # @param kwargs [Hash] Options for ArrayArbitrary. See `.array` for more information.
       # @return [Arbitrary<Symbol>]
       def symbol(**kwargs)
-        array(one_of(*SYMBOL_SAFE_CHARS), empty: false, **kwargs).map(SYMBOL_MAPPER, SYMBOL_UNMAPPER)
+        array(constant_from(*SYMBOL_SAFE_CHARS), empty: false, **kwargs).map(SYMBOL_MAPPER, SYMBOL_UNMAPPER)
       end
 
       # For floats.
@@ -234,7 +249,7 @@ module Pbt
       #
       # @return [Arbitrary<Boolean>]
       def boolean
-        one_of(true, false)
+        constant_from(true, false)
       end
 
       # For any constant values.

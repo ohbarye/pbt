@@ -46,9 +46,14 @@ RSpec.describe "generate with default rng" do
       expect(val[:y]).to be_a(Symbol)
     end
 
-    it "generates one_of without rng" do
-      val = Pbt.one_of(:a, :b, :c).generate
+    it "generates constant_from without rng" do
+      val = Pbt.constant_from(:a, :b, :c).generate
       expect([:a, :b, :c]).to include(val)
+    end
+
+    it "generates one_of without rng" do
+      val = Pbt.one_of(Pbt.integer, Pbt.constant(:a)).generate
+      expect(val.is_a?(Integer) || val == :a).to be(true)
     end
   end
 

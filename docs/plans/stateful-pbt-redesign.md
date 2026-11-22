@@ -152,7 +152,7 @@ Pbt.assert(seed: 42, num_runs: 200) do
 
     m.command :close_sub_account do |c|
       c.guard { |s| s.open && !s.accounts.empty? }
-      c.arguments { |s| Pbt.one_of(*s.accounts) }
+      c.arguments { |s| Pbt.constant_from(*s.accounts) }
       c.next_state { |s, ref| s.with(accounts: s.accounts - [ref]) }
       c.run { |sut, account_id| sut.close_sub_account(account_id) }
     end
@@ -223,7 +223,8 @@ Built-in implementations:
 - `IntegerArbitrary`: `value.is_a?(Integer) && value >= @min && value <= @max` (respecting unbounded `nil` bounds if any)
 - `ChooseArbitrary`: `@range.cover?(value)` (ensuring integer/range type compatibility)
 - `ConstantArbitrary`: `value == @val`
-- `OneOfArbitrary`: `@choices.include?(value)`
+- `ConstantFromArbitrary`: `@choices.include?(value)`
+- `OneOfArbitrary`: `true` if any branch returns `true`; `false` if all branches return `false`; otherwise `nil`
 - `FrequencyArbitrary`: `true` if any branch returns `true`; `false` if all branches return `false`; otherwise `nil`
 - `TupleArbitrary`: `false` unless `value.is_a?(Array) && value.size == @arbs.size`; aggregate element `cover?` (`false` if any `false`, `true` if all `true`, else `nil`)
 - `ArrayArbitrary`: `false` unless `value.is_a?(Array) && value.size.between?(@min_length, @max_length)`; aggregate element `cover?`
@@ -373,7 +374,7 @@ Follow TDD (`bundle exec rspec` red -> green) and Standard Ruby (`bundle exec ra
 
 ### PR 0: Core Prerequisites (Small, Zero-Risk)
 - **Files**:
-  - `lib/pbt/arbitrary/arbitrary.rb` + all subclasses (`integer`, `choose`, `constant`, `one_of`, `frequency`, `tuple`, `array`, `fixed_hash`, `filter`, `map`)
+  - `lib/pbt/arbitrary/arbitrary.rb` + all subclasses (`integer`, `choose`, `constant`, `constant_from`, `one_of`, `frequency`, `tuple`, `array`, `fixed_hash`, `filter`, `map`)
   - `lib/pbt/check/runner_iterator.rb`
   - Unit specs under `spec/pbt/arbitrary/` and `spec/pbt/check/`
 - **Checklist**:
