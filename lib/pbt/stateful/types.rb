@@ -25,6 +25,10 @@ module Pbt
 
     # Pure, immutable representation of a generated stateful test run.
     Run = Data.define(:initial_state, :steps) do
+      def initialize(initial_state:, steps:)
+        super(initial_state: initial_state, steps: steps.dup.freeze)
+      end
+
       def size
         steps.size
       end

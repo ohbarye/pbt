@@ -309,6 +309,20 @@ RSpec.describe Pbt::Stateful::SpecBuilder do
       }.to raise_error(Pbt::Stateful::ModelError, "bad model")
     end
 
+    it "raises InvalidSpec if around returns while the body fiber is still suspended" do
+      spec = build_spec do |m|
+        m.around do |_s, run|
+          fiber = Fiber.new { run.call(:sut) }
+          fiber.resume
+        end
+        m.command(:noop) { |c| c.run { nil } }
+      end
+
+      expect {
+        spec.with_sut(:init) { |_sut| Fiber.yield }
+      }.to raise_error(Pbt::Stateful::InvalidSpec, /complete before returning/)
+    end
+
     it "attaches cleanup error raised in around ensure to propagating StepFailure" do
       spec = build_spec do |m|
         m.around do |_s, run|

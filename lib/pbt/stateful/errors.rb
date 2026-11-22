@@ -28,11 +28,12 @@ module Pbt
       # @param exception_class [Class] original exception class
       # @param teardown_error [Exception, nil] secondary error raised during teardown cleanup
       def initialize(message, step_index:, step:, stage:, target:, exception_class:, teardown_error: nil)
+        frozen_target = target.is_a?(String) ? target.dup.freeze : target
         @step_index = step_index
         @step = step
         @stage = stage
-        @target = target
-        @signature = FailureSignature.new(stage: stage, target: target, exception_class: exception_class)
+        @target = frozen_target
+        @signature = FailureSignature.new(stage: stage, target: frozen_target, exception_class: exception_class)
         @teardown_error = teardown_error
         super(message)
       end

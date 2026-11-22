@@ -239,6 +239,7 @@ module Pbt
       def build_around_lifecycle(around_block)
         lambda do |initial_state, body|
           call_count = 0
+          completed = false
           propagating_error = nil
 
           run = lambda do |sut|
@@ -249,6 +250,7 @@ module Pbt
 
             begin
               body.call(sut)
+              completed = true
             rescue Exception => e # standard:disable Lint/RescueException
               propagating_error = e
               raise
@@ -286,6 +288,10 @@ module Pbt
           end
 
           raise propagating_error if propagating_error
+
+          unless completed
+            raise InvalidSpec, "around must let run complete before returning"
+          end
         end
       end
     end

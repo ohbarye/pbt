@@ -48,6 +48,23 @@ RSpec.describe "Pbt::Stateful core types and errors" do
       expect(failure.message).to include("step 1 push(1) [run]: boom")
       expect(failure.message).to include("teardown error: IOError: failed to close")
     end
+
+    it "copies and freezes mutable String targets before storing in signature" do
+      name = +"non_negative"
+      failure = described_class.new(
+        "boom",
+        step_index: nil,
+        step: nil,
+        stage: :invariant,
+        target: name,
+        exception_class: RuntimeError
+      )
+      name << "_mutated"
+
+      expect(failure.target).to eq("non_negative")
+      expect(failure.target).to be_frozen
+      expect(failure.signature.target).to eq("non_negative")
+    end
   end
 
   describe Pbt::Stateful::Ref do
@@ -89,6 +106,15 @@ RSpec.describe "Pbt::Stateful core types and errors" do
       run = described_class.new(initial_state: [], steps: [])
       expect(run.empty?).to be(true)
       expect(run.to_s).to eq("initial_state: []\n(no steps)")
+    end
+
+    it "copies and freezes steps array so caller mutations do not affect the Run" do
+      steps = [Pbt::Stateful::Step.new(id: 0, command: :inc, args: nil)]
+      run = described_class.new(initial_state: 0, steps: steps)
+      steps.clear
+
+      expect(run.size).to eq(1)
+      expect(run.steps).to be_frozen
     end
   end
 
