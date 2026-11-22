@@ -19,7 +19,8 @@ module Pbt
   extend Check::RunnerMethods
   extend Check::ConfigurationMethods
 
-  # Create a property-based test with arbitraries. To run the test, pass the returned value to `Pbt.assert` method.
+  # Create a property-based test with arbitraries. To run the test, pass the returned value to `Pbt.assert` or `Pbt.check`.
+  # Predicates fail by raising an exception (including RSpec/Minitest assertions); returning `false` alone does not fail.
   # Be aware that using both positional and keyword arguments is not supported.
   #
   # @example Basic usage
@@ -27,20 +28,25 @@ module Pbt
   #     # your test code here
   #   end
   #
-  # @example Use multiple arbitraries
-  #   Pbt.property(Pbt.string, Pbt.symbol) do |str, sym|
+  # @example Use multiple positional arbitraries
+  #   Pbt.property(Pbt.ascii_string, Pbt.symbol) do |str, sym|
   #     # your test code here
   #   end
   #
-  # @example Use hash arbitraries
-  #   Pbt.property(x: Pbt.integer, y: Pbt.integer) do |x, y|
+  # @example Use keyword arbitraries (under default `worker: :none`)
+  #   Pbt.property(x: Pbt.integer, y: Pbt.integer) do |x:, y:|
   #     # your test code here
+  #   end
+  #
+  # @example Use keyword arbitraries with `worker: :ractor` (Ractor passes the Hash as a single argument)
+  #   Pbt.property(x: Pbt.integer, y: Pbt.integer) do |h|
+  #     # h[:x], h[:y]
   #   end
   #
   # @param args [Array<Arbitrary>] Arbitraries to generate values. You can pass one or more arbitraries.
   # @param kwargs [Hash<Symbol,Arbitrary>] Arbitraries to generate values. You can pass arbitraries with keyword arguments.
   # @param predicate [Proc] Test code that receives generated values and runs the test.
-  # @return [Property]
+  # @return [Check::Property]
   def self.property(*args, **kwargs, &predicate)
     arb = to_arbitrary(args, kwargs)
     Check::Property.new(arb, &predicate)
