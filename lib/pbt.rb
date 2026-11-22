@@ -49,7 +49,12 @@ module Pbt
   # @return [Check::Property]
   def self.property(*args, **kwargs, &predicate)
     arb = to_arbitrary(args, kwargs)
-    Check::Property.new(arb, &predicate)
+    Check::Property.new(
+      arb,
+      keyword_args: args.empty? && !kwargs.empty?,
+      splat_args: args.size > 1,
+      &predicate
+    )
   end
 
   # Create a stateful property-based test backed by a model and a SUT factory.

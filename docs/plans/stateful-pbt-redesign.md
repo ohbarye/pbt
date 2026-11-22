@@ -216,18 +216,19 @@ Add `#cover?(value)` to `Pbt::Arbitrary::Arbitrary` returning:
 - `false`: value is confirmed outside this arbitrary's domain
 - `nil`: unknown / cannot determine reliably (default on base `Arbitrary` for custom user arbitraries)
 
-Built-in implementations:
+Built-in implementations (normalized via `Arbitrary.cover_result` so non-boolean custom results collapse to `nil`):
 - `IntegerArbitrary`: `value.is_a?(Integer) && value >= @min && value <= @max` (respecting unbounded `nil` bounds if any)
-- `ChooseArbitrary`: `@range.cover?(value)` (ensuring integer/range type compatibility)
-- `ConstantArbitrary`: `value == @val`
-- `ConstantFromArbitrary`: `@choices.include?(value)`
+- `ChooseArbitrary`: `false` for unbounded ranges; checks `Integer` for integer ranges and finite `Float` for float ranges, then `@range.cover?(value)`
+- `ConstantArbitrary`: `value.equal?(@val) || @val.eql?(value)`
+- `ConstantFromArbitrary`: `@choices.any? { |c| c.equal?(value) || c.eql?(value) }`
 - `OneOfArbitrary`: `true` if any branch returns `true`; `false` if all branches return `false`; otherwise `nil`
 - `FrequencyArbitrary`: `true` if any branch returns `true`; `false` if all branches return `false`; otherwise `nil`
 - `TupleArbitrary`: `false` unless `value.is_a?(Array) && value.size == @arbs.size`; aggregate element `cover?` (`false` if any `false`, `true` if all `true`, else `nil`)
 - `ArrayArbitrary`: `false` unless `value.is_a?(Array) && value.size.between?(@min_length, @max_length)`; aggregate element `cover?`
-- `FixedHashArbitrary`: `false` unless `value.is_a?(Hash) && value.keys == @hash.keys` (or same key set); aggregate value `cover?`
-- `FilterArbitrary`: combine base `cover?(value)` with `!!@refinement.call(value)` (returning `false` if refinement is falsy)
-- `MapArbitrary`: return `nil` if `@unmapper.nil?`; otherwise attempt `@unmapper.call(value)` and delegate to `@arb.cover?(unmapped)`; rescue exceptions and return `nil`
+- `FixedHashArbitrary`: `false` unless `value.is_a?(Hash) && value.size == @keys.size` with the same key set; aggregate value `cover?`
+- `FilterArbitrary`: combine base `cover?(value)` with `!!@refinement.call(value)` (returning `false` if refinement is falsy, rescuing refinement errors as `nil`)
+- `MapArbitrary`: return `nil` if `@unmapper.nil?`; otherwise unmap and check round-trip equality (`eql?`) and inner `cover?`. Returns `true` when round-trip and inner `cover?` are `true`; returns `false` only for known-bijective built-ins (`char`, `symbol`, `*_string`, `date`, `time`), and `nil` otherwise (so non-bijective maps such as `set`, `hash`, or user shrink-only unmappers never falsely reject generated values).
+- `FloatArbitrary`: `false` for non-Float, non-finite, `abs > 1_000_000.0`, or `0 < abs < 1.0 / 1_000_001.0`; `true` for `0.0`; `nil` otherwise.
 
 ### 5.2 Separating Pure `Run` from `Sample` Provenance
 

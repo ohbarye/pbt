@@ -81,7 +81,7 @@ The above snippet is very simple but contains the basic components.
 
 `Pbt.assert` is the primary runner. It executes the property returned by the block multiple times, shrinks any failure, and raises `Pbt::PropertyFailure` with reproduction details.
 
-If you want to inspect the execution result without raising, use `Pbt.check`, which returns a `Pbt::Reporter::RunDetails` struct (`failed`, `num_runs`, `num_shrinks`, `seed`, `counterexample`, `counterexample_path`, `error_message`, `error_instance`, `failures`, `verbose`, `execution_summary`, `run_configuration`).
+If you want to inspect predicate failures without raising `Pbt::PropertyFailure`, use `Pbt.check`, which returns a `Pbt::Reporter::RunDetails` struct (`failed`, `num_runs`, `num_shrinks`, `seed`, `counterexample`, `counterexample_path`, `error_message`, `error_instance`, `failures`, `verbose`, `execution_summary`, `run_configuration`). Exceptions raised during property construction or value generation still propagate to the caller.
 
 #### Property (v1 DSL Contract)
 
@@ -173,9 +173,10 @@ branch. Generated values and reported counterexamples remain ordinary Ruby value
 
 For manual shrinking, retain a sample: `sample = arb.sample(Random.new(42))`,
 then inspect `sample.value` and `sample.shrink.map(&:value)`. Calling
-`arb.shrink(value)` directly on a frequency generator returns no candidates because
-a bare value cannot identify its source generator. Stateful command arguments use
-the plain-value protocol, so frequency branches there do not shrink their arguments.
+`arb.shrink(value)` directly on `Pbt.frequency`, `Pbt.one_of`, or `Arbitrary#map`
+without an `unmapper` returns no candidates because a bare value cannot identify its
+source branch or preimage. The current `Pbt.stateful` command arguments use the
+plain-value protocol, so those contextual generators do not shrink command arguments there.
 
 ### Generator statistics
 
