@@ -34,6 +34,22 @@ module Pbt
         Sample.array(samples, @length_arb, @min_length)
       end
 
+      # @see Arbitrary#cover?
+      def cover?(value)
+        return false unless value.is_a?(Array)
+        return false if value.size < @min_length
+        return false if !@max_length.nil? && value.size > @max_length
+
+        unknown = false
+        value.each do |item|
+          covered = @value_arb.respond_to?(:cover?) ? @value_arb.cover?(item) : nil
+          return false if covered == false
+
+          unknown = true if covered.nil?
+        end
+        unknown ? nil : true
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         return Enumerator.new { |_| } if current.size == @min_length

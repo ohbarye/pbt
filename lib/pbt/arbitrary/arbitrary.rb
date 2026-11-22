@@ -29,6 +29,16 @@ module Pbt
         raise NotImplementedError
       end
 
+      # Check whether `value` belongs to this arbitrary's domain.
+      # Returns `true` if confirmed inside, `false` if confirmed outside,
+      # or `nil` if membership cannot be determined reliably (e.g. custom arbitraries).
+      #
+      # @param _value [Object]
+      # @return [Boolean, nil]
+      def cover?(_value)
+        nil
+      end
+
       # Generate a value together with lazy shrinking provenance.
       # @return [Sample]
       def sample(rng = Random.new)

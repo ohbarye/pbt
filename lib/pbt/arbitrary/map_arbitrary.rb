@@ -31,6 +31,18 @@ module Pbt
         Sample.capture(@arb, rng).map { |value| @mapper.call(value) }
       end
 
+      # @see Arbitrary#cover?
+      def cover?(value)
+        return nil if @unmapper.nil?
+
+        unmapped = @unmapper.call(value)
+        return false unless @mapper.call(unmapped) == value
+
+        @arb.respond_to?(:cover?) ? @arb.cover?(unmapped) : nil
+      rescue
+        nil
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         return [].each if @unmapper.nil?

@@ -14,6 +14,11 @@ module Pbt
         @val
       end
 
+      # @see Arbitrary#cover?
+      def cover?(value)
+        value == @val
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         Enumerator.new {}

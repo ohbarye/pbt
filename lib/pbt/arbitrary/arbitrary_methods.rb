@@ -12,6 +12,7 @@ require "pbt/arbitrary/choose_arbitrary"
 require "pbt/arbitrary/one_of_arbitrary"
 require "pbt/arbitrary/frequency_arbitrary"
 require "pbt/arbitrary/map_arbitrary"
+require "pbt/arbitrary/float_arbitrary"
 require "pbt/arbitrary/filter_arbitrary"
 
 module Pbt
@@ -211,7 +212,7 @@ module Pbt
       #
       # @return [Arbitrary<Float>]
       def float
-        tuple(integer, integer).map(FLOAT_MAPPER, FLOAT_UNMAPPER)
+        FloatArbitrary.new(tuple(integer, integer))
       end
 
       # For symbols.

@@ -24,6 +24,14 @@ module Pbt
         @arb.sample(rng).map { |values| @keys.zip(values).to_h }
       end
 
+      # @see Arbitrary#cover?
+      def cover?(value)
+        return false unless value.is_a?(Hash) && value.size == @keys.size
+        return false unless @keys.all? { |k| value.key?(k) }
+
+        @arb.cover?(@keys.map { |k| value[k] })
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         # This is not the most comprehensive but allows a reasonable number of entries in the shrink

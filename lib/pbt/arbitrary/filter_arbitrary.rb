@@ -30,6 +30,18 @@ module Pbt
         end
       end
 
+      # @see Arbitrary#cover?
+      def cover?(value)
+        base = @arb.respond_to?(:cover?) ? @arb.cover?(value) : nil
+        return false if base == false
+
+        return false unless @refinement.call(value)
+
+        base
+      rescue
+        nil
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         Enumerator.new do |y|

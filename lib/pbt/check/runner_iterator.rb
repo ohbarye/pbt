@@ -19,6 +19,7 @@ module Pbt
         @run_execution = Reporter::RunExecution.new(verbose)
         @property = property
         @next_values = source_values
+        @initial_failure = nil
         enumerator = Enumerator.new do |y|
           loop do
             y.yield @next_values.next
@@ -39,19 +40,35 @@ module Pbt
       end
 
       # Handle result of a test.
-      # When a test is successful, it records the success.
-      # When a test is failed, it records the failure and set up the next values to test with property#shrink.
+      # When a test is successful, it records the success and returns false.
+      # When a test fails with an accepted failure, it records the failure, sets up the next shrink values,
+      # and returns true. When a shrink candidate fails with an unrelated error according to `property#same_failure?`,
+      # it is ignored and returns false so shrinking continues on the current level.
       #
       # @param c [Case]
-      # @return [void]
+      # @return [Boolean] whether the failure was accepted
       def handle_result(c)
         if c.exception
+          if @initial_failure && @property.respond_to?(:same_failure?) && !@property.same_failure?(@initial_failure, c.exception)
+            return false
+          end
+
           # failed run
+          @initial_failure ||= c.exception
           @run_execution.record_failure(c)
-          @next_values = c.sample ? c.sample.shrink : @property.shrink(c.val)
+          @next_values =
+            if @property.respond_to?(:shrink_case)
+              @property.shrink_case(c)
+            elsif c.sample
+              c.sample.shrink
+            else
+              @property.shrink(c.val)
+            end
+          true
         else
           # successful run
           @run_execution.record_success(c)
+          false
         end
       end
     end
