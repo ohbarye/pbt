@@ -22,6 +22,20 @@ module Pbt
         Sample.tuple(@arbs.map { |arb| Sample.capture(arb, rng) })
       end
 
+      # @see Arbitrary#cover?
+      def cover?(value)
+        return false unless value.is_a?(Array) && value.size == @arbs.size
+
+        unknown = false
+        @arbs.each_with_index do |arb, idx|
+          covered = Arbitrary.cover_result(arb, value[idx])
+          return false if covered == false
+
+          unknown = true if covered.nil?
+        end
+        unknown ? nil : true
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         # This is not the most comprehensive but allows a reasonable number of entries in the shrink.

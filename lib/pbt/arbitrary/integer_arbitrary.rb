@@ -23,6 +23,15 @@ module Pbt
         raise
       end
 
+      # @see Arbitrary#cover?
+      def cover?(value)
+        return false unless value.is_a?(Integer)
+        return false if !@min.nil? && value < @min
+        return false if !@max.nil? && value > @max
+
+        true
+      end
+
       # @see Arbitrary#shrink
       def shrink(current, target: nil)
         # If no target is specified, use the appropriate bound as target

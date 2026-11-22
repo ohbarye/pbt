@@ -106,8 +106,7 @@ module Pbt
           # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
           rescue Exception => e # standard:disable Lint/RescueException:
             c.exception = e
-            runner.handle_result(c)
-            break # Ignore the rest of the cases. Just pick up the first failure.
+            break if runner.handle_result(c) # Ignore the rest of the cases when failure is accepted.
           end
         end
       end
@@ -125,8 +124,7 @@ module Pbt
           runner.handle_result(c)
         rescue => e
           c.exception = unwrap_ractor_exception(e)
-          runner.handle_result(c)
-          break # Ignore the rest of the cases. Just pick up the first failure.
+          break if runner.handle_result(c) # Ignore the rest of the cases when failure is accepted.
         end
       end
 

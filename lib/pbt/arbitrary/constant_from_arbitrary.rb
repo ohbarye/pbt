@@ -17,6 +17,11 @@ module Pbt
         @choices[@idx_arb.generate(rng)]
       end
 
+      # @see Arbitrary#cover?
+      def cover?(value)
+        @choices.any? { |choice| choice.equal?(value) || choice.eql?(value) }
+      end
+
       # @see Arbitrary#shrink
       def shrink(current)
         index = @choices.index { |choice| choice.equal?(current) || choice.eql?(current) }

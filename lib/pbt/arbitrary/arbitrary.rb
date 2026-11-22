@@ -29,6 +29,26 @@ module Pbt
         raise NotImplementedError
       end
 
+      # Normalize an arbitrary's 3-valued `cover?` result to `true`, `false`, or `nil`.
+      #
+      # @private
+      def self.cover_result(arbitrary, value)
+        return nil unless arbitrary.respond_to?(:cover?)
+
+        result = arbitrary.cover?(value)
+        (result == true || result == false) ? result : nil
+      end
+
+      # Check whether `value` belongs to this arbitrary's domain.
+      # Returns `true` if confirmed inside, `false` if confirmed outside,
+      # or `nil` if membership cannot be determined reliably (e.g. custom arbitraries).
+      #
+      # @param _value [Object]
+      # @return [Boolean, nil]
+      def cover?(_value)
+        nil
+      end
+
       # Generate a value together with lazy shrinking provenance.
       # @return [Sample]
       def sample(rng = Random.new)

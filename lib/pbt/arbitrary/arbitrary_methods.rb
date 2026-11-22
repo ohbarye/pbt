@@ -12,6 +12,7 @@ require "pbt/arbitrary/choose_arbitrary"
 require "pbt/arbitrary/one_of_arbitrary"
 require "pbt/arbitrary/frequency_arbitrary"
 require "pbt/arbitrary/map_arbitrary"
+require "pbt/arbitrary/float_arbitrary"
 require "pbt/arbitrary/filter_arbitrary"
 
 module Pbt
@@ -124,14 +125,14 @@ module Pbt
       # @param kwargs [Hash] Options for ArrayArbitrary. See `.array` for more information.
       # @return [Arbitrary<String>]
       def hexa_string(**kwargs)
-        array(hexa, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
+        MapArbitrary.new(array(hexa, **kwargs), STRING_MAPPER, STRING_UNMAPPER, bijective: true)
       end
 
       # For a single unicode character (including printable and non-printable).
       #
       # @return [Arbitrary<String>]
       def char
-        choose(CHAR_RANGE).map(CHAR_MAPPER, CHAR_UNMAPPER)
+        MapArbitrary.new(choose(CHAR_RANGE), CHAR_MAPPER, CHAR_UNMAPPER, bijective: true)
       end
 
       # For an alphanumeric character.
@@ -147,7 +148,7 @@ module Pbt
       # @param kwargs [Hash] Options for ArrayArbitrary. See `.array` for more information.
       # @return [Arbitrary<String>]
       def alphanumeric_string(**kwargs)
-        array(alphanumeric_char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
+        MapArbitrary.new(array(alphanumeric_char, **kwargs), STRING_MAPPER, STRING_UNMAPPER, bijective: true)
       end
 
       # For an ascii character.
@@ -163,7 +164,7 @@ module Pbt
       # @param kwargs [Hash] Options for ArrayArbitrary. See `.array` for more information.
       # @return [Arbitrary<String>]
       def ascii_string(**kwargs)
-        array(ascii_char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
+        MapArbitrary.new(array(ascii_char, **kwargs), STRING_MAPPER, STRING_UNMAPPER, bijective: true)
       end
 
       # For a printable ascii character.
@@ -179,7 +180,7 @@ module Pbt
       # @param kwargs [Hash] Options for ArrayArbitrary. See `.array` for more information.
       # @return [Arbitrary<String>]
       def printable_ascii_string(**kwargs)
-        array(printable_ascii_char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
+        MapArbitrary.new(array(printable_ascii_char, **kwargs), STRING_MAPPER, STRING_UNMAPPER, bijective: true)
       end
 
       # For a printable character.
@@ -195,7 +196,7 @@ module Pbt
       # @param kwargs [Hash] Options for ArrayArbitrary. See `.array` for more information.
       # @return [Arbitrary<String>]
       def printable_string(**kwargs)
-        array(printable_char, **kwargs).map(STRING_MAPPER, STRING_UNMAPPER)
+        MapArbitrary.new(array(printable_char, **kwargs), STRING_MAPPER, STRING_UNMAPPER, bijective: true)
       end
 
       # For symbols.
@@ -204,14 +205,14 @@ module Pbt
       # @param kwargs [Hash] Options for ArrayArbitrary. See `.array` for more information.
       # @return [Arbitrary<Symbol>]
       def symbol(**kwargs)
-        array(constant_from(*SYMBOL_SAFE_CHARS), empty: false, **kwargs).map(SYMBOL_MAPPER, SYMBOL_UNMAPPER)
+        MapArbitrary.new(array(constant_from(*SYMBOL_SAFE_CHARS), empty: false, **kwargs), SYMBOL_MAPPER, SYMBOL_UNMAPPER, bijective: true)
       end
 
       # For floats.
       #
       # @return [Arbitrary<Float>]
       def float
-        tuple(integer, integer).map(FLOAT_MAPPER, FLOAT_UNMAPPER)
+        FloatArbitrary.new
       end
 
       # For symbols.
@@ -279,7 +280,7 @@ module Pbt
       # @return [Arbitrary<Date>]
       def date(base_date: Date.today, past_offset_days: -18250, future_offset_days: 18250)
         offset_arb = integer(min: past_offset_days, max: future_offset_days)
-        offset_arb.map(DATE_MAPPER.call(base_date), DATE_UNMAPPER.call(base_date))
+        MapArbitrary.new(offset_arb, DATE_MAPPER.call(base_date), DATE_UNMAPPER.call(base_date), bijective: true)
       end
 
       # For past dates between `base_date - past_offset_days` and `base_date`.
@@ -308,7 +309,7 @@ module Pbt
       # @return [Arbitrary<Time>]
       def time(base_time: Time.now, past_offset_seconds: -1576800000, future_offset_seconds: 1576800000)
         offset_arb = integer(min: past_offset_seconds, max: future_offset_seconds)
-        offset_arb.map(TIME_MAPPER.call(base_time), TIME_UNMAPPER.call(base_time))
+        MapArbitrary.new(offset_arb, TIME_MAPPER.call(base_time), TIME_UNMAPPER.call(base_time), bijective: true)
       end
 
       # For past times between `base_time + past_offset_seconds` and `base_time`

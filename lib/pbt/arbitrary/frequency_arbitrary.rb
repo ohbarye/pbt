@@ -29,6 +29,18 @@ module Pbt
         true
       end
 
+      # @see Arbitrary#cover?
+      def cover?(value)
+        unknown = false
+        @choices.each do |_weight, arb|
+          covered = Arbitrary.cover_result(arb, value)
+          return true if covered == true
+
+          unknown = true if covered.nil?
+        end
+        unknown ? nil : false
+      end
+
       # A bare value cannot identify its branch. Use sample or Pbt.property to shrink.
       def shrink(current)
         [].each
