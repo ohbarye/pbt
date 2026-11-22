@@ -43,15 +43,15 @@ module Pbt
           config[:worker] = :none
         end
 
-        initial_values = toss(property, config[:seed])
-        source_values = Enumerator.new(config[:num_runs]) do |y|
-          config[:num_runs].times do
-            y.yield initial_values.next
-          end
+        max_skips = config[:max_skips]
+        if !max_skips.nil? && !(max_skips.is_a?(Integer) && max_skips >= 0)
+          raise Pbt::InvalidConfiguration, "max_skips must be a non-negative Integer or nil"
         end
 
+        initial_values = toss(property, config[:seed])
+
         setup_for_ractor(config, property) do
-          run_it(property, source_values, config).to_run_details(config)
+          run_it(property, initial_values, config).to_run_details(config)
         end
       end
 
@@ -81,11 +81,18 @@ module Pbt
       # Run the property test for each value.
       #
       # @param property [Property] Property to test.
-      # @param source_values [Enumerator] Enumerator of values to test.
+      # @param source_values [Enumerator] Infinite enumerator of values to test.
       # @param config [Hash] Configuration parameters.
       # @return [RunExecution] Result of the test.
       def run_it(property, source_values, config)
-        runner = Check::RunnerIterator.new(source_values, property, config[:verbose])
+        max_skips = config[:max_skips].nil? ? config[:num_runs] * 10 : config[:max_skips]
+        runner = Check::RunnerIterator.new(
+          source_values,
+          property,
+          config[:verbose],
+          target_runs: config[:num_runs],
+          max_skips: max_skips
+        )
         while runner.has_next?
           case config[:worker]
           in :none
@@ -102,10 +109,12 @@ module Pbt
       # @return [void]
       def run_it_in_sequential(property, runner)
         runner.each_with_index do |val, index|
-          c = build_case(val, index)
+          c = build_case(val, runner.case_index(index))
           begin
             property.run(c.val)
             runner.handle_result(c)
+          rescue PreconditionNotMet
+            break if runner.handle_skip
           rescue *FATAL_EXCEPTIONS
             raise
           # Catch all other exceptions including RSpec's ExpectationNotMet (It inherits Exception).
@@ -121,7 +130,7 @@ module Pbt
       # @return [void]
       def run_it_in_ractors(property, runner)
         runner.map.with_index { |val, index|
-          c = build_case(val, index)
+          c = build_case(val, runner.case_index(index))
           c.ractor = property.run_in_ractor(c.val)
           c
         }.each do |c|
@@ -129,6 +138,11 @@ module Pbt
           runner.handle_result(c)
         rescue => e
           cause = unwrap_ractor_exception(e)
+          if cause.is_a?(PreconditionNotMet)
+            break if runner.handle_skip
+
+            next
+          end
           raise cause if FATAL_EXCEPTIONS.any? { |klass| cause.is_a?(klass) }
 
           c.exception = cause

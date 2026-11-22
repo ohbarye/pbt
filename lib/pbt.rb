@@ -12,12 +12,29 @@ module Pbt
   # Represents a property-based test failure.
   class PropertyFailure < StandardError; end
 
+  # Represents a property-based test failure caused by exceeding the skip budget via `Pbt.assume`.
+  class TooManySkipsError < PropertyFailure; end
+
+  # Internal control-flow exception raised by `Pbt.assume` when a precondition is not met.
+  class PreconditionNotMet < StandardError; end
+
   # Represents an invalid configuration.
   class InvalidConfiguration < StandardError; end
 
   extend Arbitrary::ArbitraryMethods
   extend Check::RunnerMethods
   extend Check::ConfigurationMethods
+
+  # Discard the current generated test case when `condition` is falsy.
+  # Discarded cases do not count toward `num_runs` and are skipped during shrinking.
+  # Exceeding `max_skips` fails the property with `Pbt::TooManySkipsError`.
+  #
+  # @param condition [Object]
+  # @return [void]
+  # @raise [Pbt::PreconditionNotMet]
+  def self.assume(condition)
+    raise PreconditionNotMet unless condition
+  end
 
   # Create a property-based test with arbitraries. To run the test, pass the returned value to `Pbt.assert` or `Pbt.check`.
   # Predicates fail by raising an exception (including RSpec/Minitest assertions); returning `false` alone does not fail.
