@@ -15,6 +15,7 @@ RSpec.describe Pbt::Stateful::Property do
       end
 
       expect { Pbt.stateful(min_steps: -1, &base) }.to raise_error(Pbt::Stateful::InvalidSpec, /min_steps/)
+      expect { Pbt.stateful(min_steps: 0, max_steps: 0, &base) }.to raise_error(Pbt::Stateful::InvalidSpec, /max_steps/)
       expect { Pbt.stateful(min_steps: 5, max_steps: 3, &base) }.to raise_error(Pbt::Stateful::InvalidSpec, /max_steps/)
       expect { Pbt.stateful(max_shrink_attempts: -1, &base) }.to raise_error(Pbt::Stateful::InvalidSpec, /max_shrink_attempts/)
     end
@@ -176,13 +177,46 @@ RSpec.describe Pbt::Stateful::Property do
       }
     end
 
-    it "rejects non-Run inputs to #replay" do
-      prop = Pbt.stateful do |m|
+    it "resamples arbitrary initial_state when some drawn states have no eligible commands, and raises GenerationError if vacuous" do
+      valid_prop = Pbt.stateful do |m|
+        m.initial_state Pbt.integer(min: 0, max: 3)
+        m.sut { |n| n }
+        m.command(:dec) do |c|
+          c.guard { |s| s > 0 }
+          c.next_state { |s| s - 1 }
+          c.run { |sut| sut }
+        end
+      end
+
+      result = Pbt.check(num_runs: 30, seed: 1) { valid_prop }
+      expect(result.failed).to be(false)
+
+      vacuous_prop = Pbt.stateful(min_steps: 0, max_steps: 1) do |m|
+        m.initial_state Pbt.constant(0)
         m.sut { Object.new }
-        m.command(:noop) { |c| c.run { nil } }
+        m.command(:dead) do |c|
+          c.guard { false }
+          c.run { raise "must not run" }
+        end
+      end
+
+      expect { Pbt.check(seed: 42, num_runs: 2) { vacuous_prop } }.to raise_error(Pbt::Stateful::GenerationError)
+    end
+
+    it "rejects non-Run inputs and unbound Refs in #replay" do
+      prop = Pbt.stateful do |m|
+        m.initial_state []
+        m.sut { Object.new }
+        m.command(:use) { |c| c.run { nil } }
       end
 
       expect { prop.replay([]) }.to raise_error(ArgumentError, /Pbt::Stateful::Run/)
+
+      bad_run = Pbt::Stateful::Run.new(
+        initial_state: [],
+        steps: [Pbt::Stateful::Step.new(id: 0, command: :use, args: Pbt::Stateful::Ref.new(step_id: 9))]
+      )
+      expect { prop.replay(bad_run) }.to raise_error(Pbt::Stateful::InvalidSpec, /unbound Ref v9/)
     end
   end
 

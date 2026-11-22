@@ -46,15 +46,9 @@ module Pbt
       # @param rng [Random]
       # @return [RunSample]
       def generate_for_check(rng = Random.new)
-        initial_state, initial_state_sample = @spec.sample_initial_state(rng)
-        initial_eligible = eligible_commands(initial_state)
-
-        if initial_eligible.empty? && !@spec.arbitrary_initial_state? && @max_steps.positive?
-          raise InvalidSpec,
-            "no command guard is truthy at initial_state #{Resolver.format_value(initial_state)}"
-        end
-
         target_length = (@min_steps == @max_steps) ? @min_steps : rng.rand(@min_steps..@max_steps)
+        initial_state, initial_state_sample, initial_eligible = draw_initial_state(rng, target_length)
+
         state = initial_state
         steps = []
         step_samples = {}
@@ -62,17 +56,11 @@ module Pbt
 
         target_length.times do |step_index|
           eligible = (step_index == 0) ? initial_eligible : eligible_commands(state)
-          if eligible.empty?
-            break if steps.length >= @min_steps
-
-            raise GenerationError,
-              "no eligible commands at step #{step_index} " \
-              "(state: #{Resolver.format_value(state)}, min_steps: #{@min_steps})"
-          end
+          break if eligible.empty?
 
           selected = select_step(eligible, state, step_index, next_id, rng)
           if selected.nil?
-            break if steps.length >= @min_steps
+            break unless steps.empty?
 
             raise GenerationError,
               "all eligible commands produced empty argument domains at step #{step_index} " \
@@ -100,16 +88,17 @@ module Pbt
       # @param run [Run]
       # @return [void]
       def run(run)
-        sym_state = Resolver.deep_freeze(run.initial_state)
+        sym_state = Resolver.deep_freeze(Resolver.deep_dup(run.initial_state))
         env = {}
-        resolved_initial = Resolver.resolve(sym_state, env)
+        sut_initial = Resolver.resolve(sym_state, env, detach: true)
 
-        @spec.with_sut(resolved_initial) do |sut|
-          check_invariants!(resolved_initial, sut, step_index: nil, step: nil)
+        @spec.with_sut(sut_initial) do |sut|
+          inv_initial = Resolver.resolve(sym_state, env)
+          check_invariants!(inv_initial, sut, step_index: nil, step: nil)
 
           run.steps.each_with_index do |step, index|
             command = @spec.command_by_name(step.command)
-            concrete_args = Resolver.resolve(step.args, env)
+            concrete_args = Resolver.resolve(step.args, env, detach: true)
 
             result = execute_stage(stage: :run, target: command.name, step_index: index, step: step) do
               command.run!(sut, concrete_args)
@@ -120,12 +109,13 @@ module Pbt
 
             before_concrete = Resolver.resolve(sym_state, env)
             after_concrete = Resolver.resolve(after_sym, env)
+            verify_args = Resolver.resolve(step.args, env)
 
             context = Context.new(
               step: step,
               before: before_concrete,
               after: after_concrete,
-              args: concrete_args,
+              args: verify_args,
               result: result,
               sut: sut
             )
@@ -149,10 +139,13 @@ module Pbt
           raise ArgumentError, "replay expects a Pbt::Stateful::Run, got #{run.class}"
         end
 
+        validate_replay_run!(run)
         self.run(run)
       end
 
       # Determine whether a shrink candidate failure matches the original failure signature.
+      # A shrink candidate that introduces a teardown error is always accepted so that `shrink_case`
+      # immediately halts shrinking and surfaces the cleanup breakage instead of masking it.
       #
       # @param initial_err [Exception]
       # @param candidate_err [Exception]
@@ -160,6 +153,7 @@ module Pbt
       def same_failure?(initial_err, candidate_err)
         return false unless initial_err.is_a?(StepFailure) && candidate_err.is_a?(StepFailure)
         return false if initial_err.teardown_error
+        return true if candidate_err.teardown_error
 
         initial_err.signature == candidate_err.signature
       end
@@ -214,11 +208,60 @@ module Pbt
         unless min_steps.is_a?(Integer) && min_steps >= 0
           raise InvalidSpec, "min_steps must be a non-negative Integer, got #{min_steps.inspect}"
         end
-        unless max_steps.is_a?(Integer) && max_steps >= min_steps
-          raise InvalidSpec, "max_steps must be an Integer >= min_steps (#{min_steps}), got #{max_steps.inspect}"
+        unless max_steps.is_a?(Integer) && max_steps.positive? && max_steps >= min_steps
+          raise InvalidSpec, "max_steps must be a positive Integer >= min_steps (#{min_steps}), got #{max_steps.inspect}"
         end
         unless max_shrink_attempts.is_a?(Integer) && max_shrink_attempts >= 0
           raise InvalidSpec, "max_shrink_attempts must be a non-negative Integer, got #{max_shrink_attempts.inspect}"
+        end
+      end
+
+      def draw_initial_state(rng, target_length)
+        initial_state, initial_state_sample = @spec.sample_initial_state(rng)
+        initial_eligible = eligible_commands(initial_state)
+
+        unless @spec.arbitrary_initial_state?
+          if initial_eligible.empty?
+            raise InvalidSpec,
+              "no command guard is truthy at initial_state #{Resolver.format_value(initial_state)}"
+          end
+          return [initial_state, initial_state_sample, initial_eligible]
+        end
+
+        return [initial_state, initial_state_sample, initial_eligible] unless initial_eligible.empty?
+
+        if target_length.zero?
+          probe_rng = rng.dup
+          PER_STEP_MAX_ATTEMPTS.times do
+            probed_state, = @spec.sample_initial_state(probe_rng)
+            return [initial_state, initial_state_sample, initial_eligible] unless eligible_commands(probed_state).empty?
+          end
+          raise GenerationError,
+            "no command guard was truthy across #{PER_STEP_MAX_ATTEMPTS} initial_state samples"
+        end
+
+        (PER_STEP_MAX_ATTEMPTS - 1).times do
+          initial_state, initial_state_sample = @spec.sample_initial_state(rng)
+          initial_eligible = eligible_commands(initial_state)
+          return [initial_state, initial_state_sample, initial_eligible] unless initial_eligible.empty?
+        end
+
+        raise GenerationError,
+          "no command guard was truthy across #{PER_STEP_MAX_ATTEMPTS} initial_state samples"
+      end
+
+      def validate_replay_run!(run)
+        available_ids = Set.new
+        run.steps.each_with_index do |step, index|
+          @spec.command_by_name(step.command)
+          ref_ids = Resolver.collect_ref_ids(step.args)
+          unbound = ref_ids.reject { |id| available_ids.include?(id) }
+          unless unbound.empty?
+            refs_str = unbound.map { |id| "v#{id}" }.join(", ")
+            raise InvalidSpec,
+              "cannot replay run: unbound Ref #{refs_str} in step #{index + 1} #{step.format}"
+          end
+          available_ids << step.id
         end
       end
 
@@ -252,10 +295,11 @@ module Pbt
               next
             end
 
-          if command.precondition?(state, sample.value)
+          frozen_args = Resolver.deep_freeze(Resolver.deep_dup(sample.value))
+          if command.precondition?(state, frozen_args)
             ref = Ref.new(step_id: step_id)
-            next_state = command.next_state(state, sample.value, ref)
-            step = Step.new(id: step_id, command: command.name, args: sample.value)
+            next_state = command.next_state(state, frozen_args, ref)
+            step = Step.new(id: step_id, command: command.name, args: frozen_args)
             return [step, sample, next_state]
           end
         end
@@ -281,22 +325,24 @@ module Pbt
       end
 
       def check_invariants!(state, sut, step_index:, step:)
-        @spec.invariants.each do |inv|
-          execute_stage(stage: :invariant, target: inv.name, step_index: step_index, step: step) do
+        @spec.invariants.each_with_index do |inv, idx|
+          target = inv.name || :"invariant_#{idx}"
+          label = inv.name ? "invariant #{inv.name.inspect}" : "invariant"
+          execute_stage(stage: :invariant, target: target, target_label: label, step_index: step_index, step: step) do
             Resolver.invoke_with_arity(inv.block, state, sut)
           end
         end
       end
 
-      def execute_stage(stage:, target:, step_index:, step:)
+      def execute_stage(stage:, target:, step_index:, step:, target_label: nil)
         yield
       rescue *Check::FATAL_EXCEPTIONS, InvalidSpec, ModelError, PreconditionNotMet
         raise
       rescue Exception => e # standard:disable Lint/RescueException
         step_label = step_index ? "step #{step_index + 1} #{step.format}" : "initial"
-        target_label = (stage == :invariant && target) ? "invariant #{target.inspect}" : stage.to_s
+        label = target_label || stage.to_s
         failure = StepFailure.new(
-          "#{step_label} [#{target_label}]: #{e.message}",
+          "#{step_label} [#{label}]: #{e.message}",
           step_index: step_index,
           step: step,
           stage: stage,

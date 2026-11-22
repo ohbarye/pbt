@@ -30,7 +30,7 @@ RSpec.describe "Pbt.stateful end-to-end" do
   end
 
   it "shrinks arbitrary initial_state and detects deep-freeze mutation mistakes" do
-    # Bug triggers whenever initial_state >= 10 and add >= 5
+    # Bug triggers whenever initial_state >= 1 and add >= 5
     details = Pbt.check(seed: 1, num_runs: 50) do
       Pbt.stateful(min_steps: 1, max_steps: 6) do |m|
         m.initial_state Pbt.integer(min: 0, max: 100)
@@ -41,7 +41,7 @@ RSpec.describe "Pbt.stateful end-to-end" do
           c.next_state { |s, x| s + x }
           c.run do |sut, x|
             sut[:val] += x
-            raise "overflow" if sut[:init] >= 10 && x >= 5
+            raise "overflow" if sut[:init] >= 1 && x >= 5
             sut[:val]
           end
         end
@@ -51,7 +51,7 @@ RSpec.describe "Pbt.stateful end-to-end" do
     expect(details.failed).to be(true)
     expect(details.num_shrinks).to be > 0
     expect(details.counterexample.steps.size).to eq(1)
-    expect(details.counterexample.initial_state).to be_between(10, 20)
+    expect(details.counterexample.initial_state).to eq(1)
     expect(details.counterexample.initial_state).to be < details.failures.first.val.initial_state
     expect(details.counterexample.steps.first.args).to be >= 5
 
@@ -358,5 +358,98 @@ RSpec.describe "Pbt.stateful end-to-end" do
     ensure
       Pbt.configure { |config| config.worker = original_worker }
     end
+  end
+
+  it "isolates mutable String/Array args and initial_state from SUT mutations while allowing mutating SUTs" do
+    # SUT mutating String arg does not corrupt counterexample or break replay
+    mut_arg_prop = Pbt.stateful(max_steps: 1) do |m|
+      m.initial_state []
+      m.sut { [] }
+      m.command(:edit) do |c|
+        c.arguments Pbt.constant(:input).map { +"a" }
+        c.next_state { |s, str| [*s, str] }
+        c.run do |sut, arg|
+          arg.force_encoding(Encoding::BINARY)
+          sut << arg
+          raise "boom" if arg.slice!(0) == "a"
+        end
+      end
+    end
+
+    d = Pbt.check(num_runs: 1, seed: 1) { mut_arg_prop }
+    expect(d.failed).to be(true)
+    expect(d.counterexample.steps.first.args).to eq("a")
+    expect { mut_arg_prop.replay(d.counterexample) }.to raise_error(Pbt::Stateful::StepFailure, /boom/)
+
+    # SUT mutating initial_state copy is still caught by initial invariant
+    mut_init_prop = Pbt.stateful(max_steps: 1) do |m|
+      m.initial_state []
+      m.sut { |initial| initial << :unexpected }
+      m.invariant { |expected, sut| raise "bad state" unless sut == expected }
+      m.command(:clear) { |c| c.run { |sut| sut.clear } }
+    end
+
+    init_d = Pbt.check(num_runs: 1, seed: 1) { mut_init_prop }
+    expect(init_d.failed).to be(true)
+    expect(init_d.error_instance.stage).to eq(:invariant)
+  end
+
+  it "distinguishes multiple unnamed invariants in FailureSignature during shrinking" do
+    prop = Pbt.stateful(max_steps: 8, min_steps: 8) do |m|
+      m.initial_state({n: 0, flagged_at_zero: false})
+      m.sut { {} }
+      m.command(:inc) do |c|
+        c.next_state { |s| s.merge(n: s[:n] + 1) }
+        c.run { nil }
+      end
+      m.command(:flag) do |c|
+        c.next_state { |s| (s[:n] == 0) ? s.merge(flagged_at_zero: true) : s }
+        c.run { nil }
+      end
+      m.invariant { |s, _| raise "A: n reached 3" if s[:n] >= 3 }
+      m.invariant { |s, _| raise "B: flag at zero" if s[:flagged_at_zero] }
+    end
+
+    d = Pbt.check(num_runs: 1, seed: 3) { prop }
+    expect(d.failed).to be(true)
+    expect(d.error_message).to include("A: n reached 3")
+    expect(d.counterexample.command_names).to eq([:inc, :inc, :inc])
+  end
+
+  it "surfaces teardown errors introduced during shrinking or on Pbt.assume-skipped trials" do
+    cleanups = []
+    shrink_td = Pbt.check(num_runs: 1, seed: 1) do
+      Pbt.stateful(min_steps: 2, max_steps: 2) do |m|
+        m.sut { [] }
+        m.teardown do |sut|
+          cleanups << sut.size
+          raise IOError, "leak" if sut.size == 1
+        end
+        m.command(:append) do |c|
+          c.run do |sut|
+            sut << :item
+            raise "boom" if sut.size == 2
+          end
+        end
+      end
+    end
+
+    expect(shrink_td.failed).to be(true)
+    expect(shrink_td.error_instance.stage).to eq(:teardown)
+    expect(shrink_td.error_instance.teardown_error).to be_a(IOError)
+    expect(cleanups).to eq([2, 1])
+
+    skip_td = Pbt.check(seed: 0, num_runs: 1) do
+      Pbt.stateful(max_steps: 1) do |m|
+        m.initial_state Pbt.integer(min: 0, max: 1)
+        m.sut { |n| n }
+        m.teardown { |n| raise IOError, "leak" if n.zero? }
+        m.command(:check) { |c| c.run { |n| Pbt.assume(n == 1) } }
+      end
+    end
+
+    expect(skip_td.failed).to be(true)
+    expect(skip_td.error_instance.stage).to eq(:teardown)
+    expect(skip_td.error_instance.teardown_error).to be_a(IOError)
   end
 end

@@ -202,7 +202,7 @@ module Pbt
 
         run = run_sample.run
         initial_sample.shrink.each do |child_sample|
-          frozen_state = Resolver.deep_freeze(child_sample.value)
+          frozen_state = Resolver.deep_freeze(Resolver.deep_dup(child_sample.value))
           candidate = Run.new(initial_state: frozen_state, steps: run.steps)
           status = emit_candidate(
             y,
@@ -229,7 +229,8 @@ module Pbt
 
           if step_sample
             step_sample.shrink.each do |child_sample|
-              new_step = Step.new(id: step.id, command: step.command, args: child_sample.value)
+              frozen_arg = Resolver.deep_freeze(Resolver.deep_dup(child_sample.value))
+              new_step = Step.new(id: step.id, command: step.command, args: frozen_arg)
               new_steps = steps.dup
               new_steps[idx] = new_step
               candidate = Run.new(initial_state: run.initial_state, steps: new_steps.freeze)
@@ -250,7 +251,8 @@ module Pbt
                 nil
               end
             arb&.shrink(step.args)&.each do |shrunk_arg|
-              new_step = Step.new(id: step.id, command: step.command, args: shrunk_arg)
+              frozen_arg = Resolver.deep_freeze(Resolver.deep_dup(shrunk_arg))
+              new_step = Step.new(id: step.id, command: step.command, args: frozen_arg)
               new_steps = steps.dup
               new_steps[idx] = new_step
               candidate = Run.new(initial_state: run.initial_state, steps: new_steps.freeze)
