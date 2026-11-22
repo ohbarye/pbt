@@ -43,4 +43,57 @@ RSpec.describe Pbt::Check::RunnerMethods do
       expect(runner_host.send(:unwrap_ractor_exception, error)).to eq(error)
     end
   end
+
+  describe "fatal exception propagation" do
+    [
+      [SystemExit, -> { exit(1) }],
+      [Interrupt, -> { raise Interrupt, "ctrl-c" }],
+      [NoMemoryError, -> { raise NoMemoryError, "oom" }]
+    ].each do |exception_class, trigger|
+      it "re-raises #{exception_class} immediately without shrinking" do
+        calls = 0
+        expect {
+          Pbt.check(num_runs: 5, worker: :none) do
+            Pbt.property(Pbt.integer(min: 1, max: 100)) do |_n|
+              calls += 1
+              trigger.call
+            end
+          end
+        }.to raise_error(exception_class)
+        expect(calls).to eq(1)
+      end
+    end
+
+    it "still catches non-fatal Exception subclasses as property failures" do
+      custom_exception = Class.new(Exception) # standard:disable Lint/InheritException
+      result = Pbt.check(num_runs: 1, worker: :none) do
+        Pbt.property(Pbt.constant(1)) do |_n|
+          raise custom_exception, "assertion failed"
+        end
+      end
+
+      expect(result.failed).to be(true)
+      expect(result.error_instance).to be_a(custom_exception)
+    end
+
+    it "re-raises fatal exceptions in Pbt.stateful without rewrapping" do
+      cmd = Class.new do
+        def name = :interrupt
+        def arguments(_state) = Pbt.nil
+        def applicable?(_state, _args) = true
+        def next_state(state, _args) = state
+        def run!(_sut, _args) = raise(Interrupt, "ctrl-c")
+        def verify!(**) = nil
+      end.new
+      model = Object.new
+      model.define_singleton_method(:initial_state) { 0 }
+      model.define_singleton_method(:commands) { |_state| [cmd] }
+
+      expect {
+        Pbt.check(num_runs: 10, seed: 1, worker: :none) do
+          Pbt.stateful(model: model, sut: -> { Object.new }, max_steps: 3)
+        end
+      }.to raise_error(Interrupt, "ctrl-c")
+    end
+  end
 end

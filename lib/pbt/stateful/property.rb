@@ -140,6 +140,8 @@ module Pbt
               result:,
               sut:
             )
+          rescue *Check::FATAL_EXCEPTIONS
+            raise
           rescue Exception => e # standard:disable Lint/RescueException:
             raise e.class,
               "stateful step #{index} (#{command_name(command)}): #{e.message} [args=#{args.inspect}]",
