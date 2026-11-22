@@ -2,14 +2,14 @@
 
 RSpec.describe Pbt::Arbitrary::OneOfArbitrary do
   describe "#initialize" do
-    it "rejects empty arguments" do
-      expect { Pbt.one_of }.to raise_error(ArgumentError)
+    it "raises EmptyDomainError on empty arguments" do
+      expect { Pbt.one_of }.to raise_error(Pbt::Arbitrary::EmptyDomainError)
     end
 
-    it "rejects non-arbitrary choices" do
-      expect { Pbt.one_of(:a, :b) }.to raise_error(ArgumentError)
-      expect { Pbt.one_of(Pbt.integer, 42) }.to raise_error(ArgumentError)
-      expect { Pbt.one_of(nil) }.to raise_error(ArgumentError)
+    it "rejects non-arbitrary choices with a constant_from hint" do
+      expect { Pbt.one_of(:a, :b) }.to raise_error(ArgumentError, /Pbt\.constant_from/)
+      expect { Pbt.one_of(Pbt.integer, 42) }.to raise_error(ArgumentError, /Pbt\.constant_from/)
+      expect { Pbt.one_of(nil) }.to raise_error(ArgumentError, /Pbt\.constant_from/)
     end
   end
 

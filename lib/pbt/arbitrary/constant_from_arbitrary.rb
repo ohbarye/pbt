@@ -19,7 +19,7 @@ module Pbt
 
       # @see Arbitrary#shrink
       def shrink(current)
-        index = @choices.index(current)
+        index = @choices.index { |choice| choice.equal?(current) || choice.eql?(current) }
         return Enumerator.new {} if index.nil?
 
         # Shrinks to values earlier in the list of `choices`.

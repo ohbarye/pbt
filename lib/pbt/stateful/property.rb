@@ -257,6 +257,8 @@ module Pbt
         end
 
         NoApplicableArgs
+      rescue Pbt::Arbitrary::EmptyDomainError
+        NoApplicableArgs
       end
 
       # @param command [Object]

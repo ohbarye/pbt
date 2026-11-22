@@ -6,9 +6,11 @@ module Pbt
     class OneOfArbitrary < Arbitrary
       # @param arbitraries [Array<Arbitrary>] Non-empty list of arbitraries to choose from.
       def initialize(arbitraries)
-        unless arbitraries.is_a?(Array) && !arbitraries.empty? &&
-            arbitraries.all? { |arb| arb.respond_to?(:generate) && arb.respond_to?(:shrink) }
-          raise ArgumentError, "one_of expects one or more arbitraries"
+        raise ArgumentError, "one_of expects an Array of arbitraries" unless arbitraries.is_a?(Array)
+        raise EmptyDomainError, "one_of requires at least one arbitrary" if arbitraries.empty?
+
+        unless arbitraries.all? { |arb| arb.respond_to?(:generate) && arb.respond_to?(:shrink) }
+          raise ArgumentError, "one_of expects arbitraries (use Pbt.constant_from for constant values)"
         end
 
         @arbitraries = arbitraries.dup
