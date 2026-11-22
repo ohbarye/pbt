@@ -7,6 +7,9 @@ require "pbt/reporter/run_details_reporter"
 
 module Pbt
   module Check
+    # Exceptions that must never be treated as property failures or swallowed during shrinking.
+    FATAL_EXCEPTIONS = [SystemExit, SignalException, NoMemoryError].freeze
+
     # Module to be
     module RunnerMethods
       include Check::Tosser
@@ -103,7 +106,9 @@ module Pbt
           begin
             property.run(c.val)
             runner.handle_result(c)
-          # Catch all exceptions including RSpec's ExpectationNotMet (It inherits Exception).
+          rescue *FATAL_EXCEPTIONS
+            raise
+          # Catch all other exceptions including RSpec's ExpectationNotMet (It inherits Exception).
           rescue Exception => e # standard:disable Lint/RescueException:
             c.exception = e
             break if runner.handle_result(c) # Ignore the rest of the cases when failure is accepted.
@@ -123,7 +128,10 @@ module Pbt
           wait_ractor_result(c.ractor)
           runner.handle_result(c)
         rescue => e
-          c.exception = unwrap_ractor_exception(e)
+          cause = unwrap_ractor_exception(e)
+          raise cause if FATAL_EXCEPTIONS.any? { |klass| cause.is_a?(klass) }
+
+          c.exception = cause
           break if runner.handle_result(c) # Ignore the rest of the cases when failure is accepted.
         end
       end

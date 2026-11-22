@@ -17,17 +17,19 @@ RSpec.describe Pbt::Check::Configuration do
 
       describe "for all runners" do
         around do |ex|
+          original_num_runs = Pbt.configuration.num_runs
+          original_worker = Pbt.configuration.worker
+
           Pbt.configure do |config|
             config.num_runs = 2
             config.worker = :none
           end
 
           ex.run
-
-          # rollback the configuration
+        ensure
           Pbt.configure do |config|
-            config.num_runs = 100
-            config.worker = :ractor
+            config.num_runs = original_num_runs
+            config.worker = original_worker
           end
         end
 
