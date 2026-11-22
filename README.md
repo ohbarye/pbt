@@ -219,7 +219,9 @@ Generator and classifier errors propagate to the caller.
 `Pbt` also provides a stateful property API for model-based / command-based testing.
 It is designed as a property-compatible object (`generate`, `shrink`, `run`) so it works with the existing runner (`Pbt.assert` / `Pbt.check`) without changing the runner API.
 
-The stateful API is stable as of v0.7.0. Commands must implement `arguments(state)` and `applicable?(state, args)`; the earlier zero-argument / state-only forms are no longer supported.
+> **Note:** The current `Pbt.stateful(model:, sut:)` protocol is planned to be replaced with a cleaner yield-builder DSL and improved shrinking engine in v0.9.0 before v1.0.0. See [#67](https://github.com/ohbarye/pbt/issues/67) and [docs/plans/stateful-pbt-redesign.md](docs/plans/stateful-pbt-redesign.md).
+
+Commands currently implement `arguments(state)` and `applicable?(state, args)`; the earlier zero-argument / state-only forms are no longer supported.
 
 ### Minimal usage
 
@@ -398,6 +400,10 @@ Pbt.configure do |config|
   # Whether to report exceptions in threads.
   # It's useful to suppress error logs on Ractor that reports many errors. Default is `false`.
   config.thread_report_on_exception = false
+
+  # Maximum number of skipped cases allowed via `Pbt.assume`.
+  # Defaults to `num_runs * 10` when `nil`.
+  config.max_skips = nil
 end
 ```
 
