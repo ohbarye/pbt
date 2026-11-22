@@ -74,27 +74,27 @@ module Pbt
     )
   end
 
-  # Create a stateful property-based test backed by a model and a SUT factory.
-  # The returned object is compatible with `Pbt.assert` / `Pbt.check`.
+  # Create a stateful property-based test using a yield-based model builder DSL.
+  # The returned `Pbt::Stateful::Property` is compatible with `Pbt.assert`, `Pbt.check`,
+  # `Pbt.statistics`, and `property.replay(run)`.
   #
-  # The model object is expected to provide:
-  # - `initial_state`
-  # - `commands(state)` -> Array of command objects
-  #
-  # Each command object is expected to provide:
-  # - `name`
-  # - `arguments(state)` -> an arbitrary
-  # - `applicable?(state, args)` -> bool
-  # - `next_state(state, args)`
-  # - `run!(sut, args)` -> result
-  # - `verify!(before_state:, after_state:, args:, result:, sut:)`
-  #
-  # @param model [Object]
-  # @param sut [Proc] Factory proc that returns a fresh SUT per run.
-  # @param max_steps [Integer]
+  # @param max_steps [Integer] Maximum number of commands per generated run (default: 20).
+  # @param min_steps [Integer] Minimum number of commands per generated run (default: 1).
+  # @param max_shrink_attempts [Integer] Total shrink attempt budget per failure (default: 1000).
+  # @yieldparam m [Pbt::Stateful::SpecBuilder] Model builder for `initial_state`, `sut`/`teardown`/`around`, `command`, and `invariant`.
   # @return [Pbt::Stateful::Property]
-  def self.stateful(model:, sut:, max_steps: 20)
-    Stateful::Property.new(model:, sut:, max_steps:)
+  def self.stateful(max_steps: 20, min_steps: 1, max_shrink_attempts: 1_000)
+    raise Stateful::InvalidSpec, "Pbt.stateful requires a block" unless block_given?
+
+    builder = Stateful::SpecBuilder.new
+    yield(builder)
+    spec = builder.build
+    Stateful::Property.new(
+      spec: spec,
+      max_steps: max_steps,
+      min_steps: min_steps,
+      max_shrink_attempts: max_shrink_attempts
+    )
   end
 
   # Inspect an independent sample of generated values, optionally grouped by a classifier.

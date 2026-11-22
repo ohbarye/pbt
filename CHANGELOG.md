@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- [Breaking change] Replace `Pbt.stateful(model:, sut:)` with a redesigned yield-based DSL (`Pbt.stateful(max_steps:, min_steps:, max_shrink_attempts:) { |m| ... }`) featuring `initial_state` (value, block, or shrinkable `Arbitrary`), `sut`+`teardown` / `around` lifecycle, weighted commands (`guard`, `arguments`, `precondition`, `next_state`, `run`, `verify`), `invariant`s, symbolic `Ref`s, best-first shrinking with offline `cover?` validation and `FailureSignature` equivalence, `property.replay`, `Pbt.statistics` support, and multiline counterexample reporting ([#67](https://github.com/ohbarye/pbt/issues/67)).
+
 ## [0.8.0] - 2026-11-22
 
 - [Breaking change] Drop support for Ruby 3.2 and earlier (EOL); Ruby 3.3 or later is now required, and Ruby 4.1.0-preview1 is added to CI [#66](https://github.com/ohbarye/pbt/pull/66)

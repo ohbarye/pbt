@@ -39,8 +39,12 @@ module Pbt
         property = property.call
         config = Pbt.configuration.to_h.merge(options.to_h)
 
-        if property.respond_to?(:stateful?) && property.stateful? && !options.key?(:worker)
-          config[:worker] = :none
+        if property.respond_to?(:stateful?) && property.stateful?
+          if options.key?(:worker) && config[:worker] == :ractor
+            raise Pbt::InvalidConfiguration, "Pbt.stateful does not support worker: :ractor. Use worker: :none instead."
+          end
+
+          config[:worker] = :none unless options.key?(:worker)
         end
 
         max_skips = config[:max_skips]

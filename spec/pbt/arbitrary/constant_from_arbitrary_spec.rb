@@ -61,31 +61,23 @@ RSpec.describe Pbt::Arbitrary::ConstantFromArbitrary do
   end
 
   describe "stateful integration" do
-    it "skips commands whose arguments construct an empty constant_from when another command is applicable" do
-      empty_cmd = Class.new do
-        def name = :empty
-        def arguments(_state) = Pbt.constant_from(*[])
-        def applicable?(_state, _args) = true
-        def next_state(state, _args) = state
-        def run!(_sut, _args) = nil
-        def verify!(**) = nil
-      end.new
-
-      ok_cmd = Class.new do
-        def name = :ok
-        def arguments(_state) = Pbt.constant(1)
-        def applicable?(_state, _args) = true
-        def next_state(state, args) = state + args
-        def run!(_sut, args) = args
-        def verify!(**) = nil
-      end.new
-
-      model = Object.new
-      model.define_singleton_method(:initial_state) { 0 }
-      model.define_singleton_method(:commands) { |_state| [empty_cmd, ok_cmd] }
-
+    it "skips commands whose arguments construct an empty constant_from when another command is eligible" do
       result = Pbt.check(seed: 1, num_runs: 5, worker: :none) do
-        Pbt.stateful(model: model, sut: -> { Object.new }, max_steps: 3)
+        Pbt.stateful(max_steps: 3) do |m|
+          m.initial_state 0
+          m.sut { Object.new }
+
+          m.command(:empty) do |c|
+            c.arguments { |_state| Pbt.constant_from(*[]) }
+            c.run { |_sut, _args| nil }
+          end
+
+          m.command(:ok) do |c|
+            c.arguments Pbt.constant(1)
+            c.next_state { |state, args| state + args }
+            c.run { |_sut, args| args }
+          end
+        end
       end
 
       expect(result.failed).to be(false)
