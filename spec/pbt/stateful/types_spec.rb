@@ -131,6 +131,27 @@ RSpec.describe "Pbt::Stateful core types and errors" do
           described_class.resolve(Pbt::Stateful::Ref.new(step_id: 99), {0 => nil})
         }.to raise_error(KeyError)
       end
+
+      it "detaches mutable Strings and frozen Structs when detach: true while preserving Ref identity" do
+        sut_handle = +"live"
+        ref0 = Pbt::Stateful::Ref.new(step_id: 0)
+        arg_str = "abc"
+        frozen_struct = struct_class.new(arg_str, [ref0]).freeze
+
+        resolved = described_class.resolve(frozen_struct, {0 => sut_handle}, detach: true)
+        expect(resolved).not_to be_frozen
+        expect(resolved.id).not_to be_frozen
+        expect(resolved.id).not_to equal(arg_str)
+        expect(resolved.items.first).to equal(sut_handle)
+      end
+
+      it "handles cyclic containers without SystemStackError in resolve and format_value" do
+        cyclic = []
+        cyclic << cyclic
+        resolved = described_class.resolve(cyclic, {})
+        expect(resolved.first).to equal(resolved)
+        expect(described_class.format_value(cyclic)).to eq("[[...]]")
+      end
     end
 
     describe ".collect_ref_ids" do
@@ -160,7 +181,8 @@ RSpec.describe "Pbt::Stateful core types and errors" do
 
       it "falls back to recursive container freeze when an object is not Ractor-shareable" do
         non_shareable = proc { 1 }
-        state = {fn: non_shareable, list: [1, 2]}
+        mutex = Mutex.new
+        state = {fn: non_shareable, lock: mutex, list: [1, 2]}
         frozen_state = described_class.deep_freeze(state)
 
         expect(frozen_state).to be_frozen

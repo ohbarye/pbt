@@ -33,7 +33,7 @@ module Pbt
         case @initial_state_kind
         when :arbitrary
           sample = Pbt::Arbitrary::Sample.capture(@initial_state_source, rng)
-          [Resolver.deep_freeze(sample.value), sample]
+          [Resolver.deep_freeze(Resolver.deep_dup(sample.value)), sample]
         when :block
           value =
             begin
@@ -47,7 +47,7 @@ module Pbt
             end
           [Resolver.deep_freeze(value), nil]
         else
-          [Resolver.deep_freeze(@initial_state_source), nil]
+          [Resolver.deep_freeze(Resolver.deep_dup(@initial_state_source)), nil]
         end
       end
 
@@ -97,7 +97,7 @@ module Pbt
           @initial_state_kind = :block
           @initial_state_source = block
         elsif !value.equal?(UNSET)
-          if arbitrary?(value)
+          if Resolver.arbitrary?(value)
             @initial_state_kind = :arbitrary
             @initial_state_source = value
           else
@@ -174,10 +174,6 @@ module Pbt
 
       private
 
-      def arbitrary?(obj)
-        obj.respond_to?(:sample) || (obj.respond_to?(:generate) && obj.respond_to?(:shrink))
-      end
-
       def build_lifecycle
         if @around_block
           build_around_lifecycle(@around_block)
@@ -221,7 +217,7 @@ module Pbt
               rescue Exception => teardown_err # standard:disable Lint/RescueException
                 if propagating_error.is_a?(StepFailure)
                   propagating_error.attach_teardown_error(teardown_err)
-                elsif propagating_error.nil?
+                elsif propagating_error.nil? || propagating_error.is_a?(PreconditionNotMet)
                   err = StepFailure.new(
                     "teardown failed: #{teardown_err.class}: #{teardown_err.message}",
                     step_index: nil,
@@ -243,7 +239,7 @@ module Pbt
       def build_around_lifecycle(around_block)
         lambda do |initial_state, body|
           call_count = 0
-          propagating_failure = nil
+          propagating_error = nil
 
           run = lambda do |sut|
             call_count += 1
@@ -253,20 +249,22 @@ module Pbt
 
             begin
               body.call(sut)
-            rescue StepFailure => e
-              propagating_failure = e
+            rescue Exception => e # standard:disable Lint/RescueException
+              propagating_error = e
               raise
             end
           end
 
           begin
             Resolver.invoke_with_arity(around_block, initial_state, run)
-          rescue StepFailure, InvalidSpec, ModelError, *Check::FATAL_EXCEPTIONS
+          rescue StepFailure, InvalidSpec, ModelError, PreconditionNotMet, *Check::FATAL_EXCEPTIONS
             raise
           rescue Exception => e # standard:disable Lint/RescueException
-            if propagating_failure
-              propagating_failure.attach_teardown_error(e)
-              raise propagating_failure
+            if propagating_error.is_a?(StepFailure)
+              propagating_error.attach_teardown_error(e)
+              raise propagating_error
+            elsif propagating_error && !propagating_error.is_a?(PreconditionNotMet)
+              raise propagating_error
             end
 
             stage = (call_count == 0) ? :sut : :teardown
@@ -283,11 +281,11 @@ module Pbt
             raise err
           end
 
-          raise propagating_failure if propagating_failure
-
-          if call_count == 0
-            raise InvalidSpec, "around must call run exactly once (never called)"
+          if call_count != 1
+            raise InvalidSpec, "around must call run exactly once (called #{call_count} times)"
           end
+
+          raise propagating_error if propagating_error
         end
       end
     end

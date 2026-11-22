@@ -78,6 +78,22 @@ RSpec.describe Pbt::Stateful::SpecBuilder do
   end
 
   describe "initial_state sampling" do
+    it "treats a constant Array as a constant initial state rather than an arbitrary" do
+      original = [1, 2]
+      spec = build_spec do |m|
+        m.initial_state original
+        m.sut { [] }
+        m.command(:noop) { |c| c.run { nil } }
+      end
+
+      expect(spec.arbitrary_initial_state?).to be(false)
+      val, sample = spec.sample_initial_state(Random.new(1))
+      expect(val).to eq([1, 2])
+      expect(val).to be_frozen
+      expect(sample).to be_nil
+      expect(original).not_to be_frozen
+    end
+
     it "supports constant, block, and arbitrary initial states and deep-freezes them" do
       const_spec = build_spec do |m|
         m.initial_state({items: []})
@@ -200,6 +216,21 @@ RSpec.describe Pbt::Stateful::SpecBuilder do
       }
     end
 
+    it "raises a :teardown StepFailure when body skips via PreconditionNotMet and teardown fails" do
+      spec = build_spec do |m|
+        m.sut { :my_sut }
+        m.teardown { |_sut| raise IOError, "leak on skip" }
+        m.command(:noop) { |c| c.run { nil } }
+      end
+
+      expect {
+        spec.with_sut(:init) { |_sut| Pbt.assume(false) }
+      }.to raise_error(Pbt::Stateful::StepFailure) { |err|
+        expect(err.stage).to eq(:teardown)
+        expect(err.teardown_error).to be_a(IOError)
+      }
+    end
+
     it "skips teardown if sut setup itself fails and raises a :sut StepFailure" do
       teardown_called = false
       spec = build_spec do |m|
@@ -235,12 +266,12 @@ RSpec.describe Pbt::Stateful::SpecBuilder do
       expect(events).to eq([[:before, :init], [:body, :wrapped_sut], :after])
     end
 
-    it "raises InvalidSpec if around never calls run or calls run more than once" do
+    it "raises InvalidSpec if around never calls run or calls run more than once (even if rescued)" do
       never_spec = build_spec do |m|
         m.around { |_s, _run| nil }
         m.command(:noop) { |c| c.run { nil } }
       end
-      expect { never_spec.with_sut(:init) { nil } }.to raise_error(Pbt::Stateful::InvalidSpec, /never called/)
+      expect { never_spec.with_sut(:init) { nil } }.to raise_error(Pbt::Stateful::InvalidSpec, /called 0 times/)
 
       twice_spec = build_spec do |m|
         m.around do |_s, run|
@@ -250,6 +281,32 @@ RSpec.describe Pbt::Stateful::SpecBuilder do
         m.command(:noop) { |c| c.run { nil } }
       end
       expect { twice_spec.with_sut(:init) { nil } }.to raise_error(Pbt::Stateful::InvalidSpec, /called 2 times/)
+
+      rescued_twice_spec = build_spec do |m|
+        m.around do |_s, run|
+          run.call(:a)
+          run.call(:b)
+        rescue Pbt::Stateful::InvalidSpec
+          nil
+        end
+        m.command(:noop) { |c| c.run { nil } }
+      end
+      expect { rescued_twice_spec.with_sut(:init) { nil } }.to raise_error(Pbt::Stateful::InvalidSpec, /called 2 times/)
+    end
+
+    it "preserves ModelError instead of misclassifying as :teardown when around cleanup also raises" do
+      spec = build_spec do |m|
+        m.around do |_s, run|
+          run.call(:sut)
+        ensure
+          raise IOError, "cleanup boom"
+        end
+        m.command(:noop) { |c| c.run { nil } }
+      end
+
+      expect {
+        spec.with_sut(:init) { |_sut| raise Pbt::Stateful::ModelError, "bad model" }
+      }.to raise_error(Pbt::Stateful::ModelError, "bad model")
     end
 
     it "attaches cleanup error raised in around ensure to propagating StepFailure" do

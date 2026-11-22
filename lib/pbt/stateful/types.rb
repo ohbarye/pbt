@@ -68,28 +68,96 @@ module Pbt
     module Resolver
       module_function
 
+      # Return whether `obj` is a Pbt arbitrary (explicitly avoiding false positives like `Array#sample`).
+      #
+      # @param obj [Object]
+      # @return [Boolean]
+      def arbitrary?(obj)
+        obj.is_a?(Pbt::Arbitrary::Arbitrary) || (obj.respond_to?(:generate) && obj.respond_to?(:shrink))
+      end
+
+      # Deep-duplicate standard value containers and mutable Strings while preserving cycles and opaque objects.
+      #
+      # @param obj [Object]
+      # @param cache [Hash]
+      # @return [Object]
+      def deep_dup(obj, cache = {}.compare_by_identity)
+        return cache[obj] if cache.key?(obj)
+
+        case obj
+        when String
+          obj.dup
+        when Array
+          res = []
+          cache[obj] = res
+          obj.each { |elem| res << deep_dup(elem, cache) }
+          res
+        when Hash
+          res = {}
+          cache[obj] = res
+          obj.each { |k, v| res[deep_dup(k, cache)] = deep_dup(v, cache) }
+          res
+        when Set
+          res = Set.new
+          cache[obj] = res
+          obj.each { |elem| res << deep_dup(elem, cache) }
+          res
+        when Struct
+          res = obj.dup
+          cache[obj] = res
+          obj.members.each { |member| res[member] = deep_dup(obj[member], cache) }
+          res
+        when Data
+          members = obj.to_h
+          members.empty? ? obj : obj.with(**members.transform_values { |v| deep_dup(v, cache) })
+        else
+          obj
+        end
+      end
+
       # Resolve symbolic `Ref` tokens into concrete SUT return values inside standard value containers.
+      # When `detach: true`, mutable Strings and frozen Structs in symbolic values are duplicated so SUT
+      # mutations never corrupt immutable `Run`/`Step` values or trigger `FrozenError`, while concrete
+      # `Ref` targets from `env` retain their exact object identity.
       #
       # @param obj [Object]
       # @param env [Hash{Integer => Object}]
+      # @param detach [Boolean]
+      # @param cache [Hash]
       # @return [Object]
-      def resolve(obj, env)
+      def resolve(obj, env, detach: false, cache: {}.compare_by_identity)
+        return cache[obj] if cache.key?(obj)
+
         case obj
         when Ref
           env.fetch(obj.step_id)
+        when String
+          detach ? obj.dup : obj
         when Array
-          obj.map { |elem| resolve(elem, env) }
+          res = []
+          cache[obj] = res
+          obj.each { |elem| res << resolve(elem, env, detach: detach, cache: cache) }
+          res
         when Hash
-          obj.transform_keys { |k| resolve(k, env) }.transform_values { |v| resolve(v, env) }
+          res = {}
+          cache[obj] = res
+          obj.each do |k, v|
+            res[resolve(k, env, detach: detach, cache: cache)] = resolve(v, env, detach: detach, cache: cache)
+          end
+          res
         when Set
-          Set.new(obj.map { |elem| resolve(elem, env) })
+          res = Set.new
+          cache[obj] = res
+          obj.each { |elem| res << resolve(elem, env, detach: detach, cache: cache) }
+          res
         when Struct
           copy = obj.dup
-          obj.members.each { |member| copy[member] = resolve(obj[member], env) }
-          obj.frozen? ? copy.freeze : copy
+          cache[obj] = copy
+          obj.members.each { |member| copy[member] = resolve(obj[member], env, detach: detach, cache: cache) }
+          (!detach && obj.frozen?) ? copy.freeze : copy
         when Data
           members = obj.to_h
-          members.empty? ? obj : obj.with(**members.transform_values { |v| resolve(v, env) })
+          members.empty? ? obj : obj.with(**members.transform_values { |v| resolve(v, env, detach: detach, cache: cache) })
         else
           obj
         end
@@ -142,21 +210,43 @@ module Pbt
       # Format a value for counterexample traces, rendering `Ref` as `v<id>`.
       #
       # @param obj [Object]
+      # @param visited [Hash]
       # @return [String]
-      def format_value(obj)
+      def format_value(obj, visited = {}.compare_by_identity)
         case obj
         when Ref
           obj.to_s
         when Array
-          "[#{obj.map { |e| format_value(e) }.join(", ")}]"
-        when Hash
-          pairs = obj.map do |k, v|
-            key_str = k.is_a?(Symbol) ? "#{k}:" : "#{format_value(k)} =>"
-            "#{key_str} #{format_value(v)}"
+          return "[...]" if visited.key?(obj)
+
+          visited[obj] = true
+          begin
+            "[#{obj.map { |e| format_value(e, visited) }.join(", ")}]"
+          ensure
+            visited.delete(obj)
           end
-          "{#{pairs.join(", ")}}"
+        when Hash
+          return "{...}" if visited.key?(obj)
+
+          visited[obj] = true
+          begin
+            pairs = obj.map do |k, v|
+              key_str = k.is_a?(Symbol) ? "#{k}:" : "#{format_value(k, visited)} =>"
+              "#{key_str} #{format_value(v, visited)}"
+            end
+            "{#{pairs.join(", ")}}"
+          ensure
+            visited.delete(obj)
+          end
         when Set
-          "Set[#{obj.map { |e| format_value(e) }.join(", ")}]"
+          return "Set[...]" if visited.key?(obj)
+
+          visited[obj] = true
+          begin
+            "Set[#{obj.map { |e| format_value(e, visited) }.join(", ")}]"
+          ensure
+            visited.delete(obj)
+          end
         else
           obj.inspect
         end
@@ -168,7 +258,7 @@ module Pbt
       # @return [Object]
       def deep_freeze(obj)
         Ractor.make_shareable(obj)
-      rescue Ractor::IsolationError
+      rescue Ractor::Error
         fallback_freeze(obj, {}.compare_by_identity)
       end
 

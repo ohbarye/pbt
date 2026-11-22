@@ -102,10 +102,10 @@ module Pbt
       private
 
       def validate_arbitrary!(arb)
-        return if arb.respond_to?(:sample) || (arb.respond_to?(:generate) && arb.respond_to?(:shrink))
+        return if Resolver.arbitrary?(arb)
 
         raise InvalidSpec,
-          "command #{name.inspect} arguments must return an arbitrary responding to generate and shrink (or sample), got #{arb.class}"
+          "command #{name.inspect} arguments must return an arbitrary responding to generate and shrink, got #{arb.class}"
       end
 
       def raise_model_error(callback_name, error)
@@ -157,7 +157,7 @@ module Pbt
             Pbt.fixed_hash(kwargs)
           elsif args.size == 1
             arb = args.first
-            if !arbitrary?(arb)
+            if !Resolver.arbitrary?(arb)
               raise InvalidSpec, "command #{@name.inspect} arguments must be an arbitrary, got #{arb.class}"
             end
             arb
@@ -209,12 +209,6 @@ module Pbt
           run_block: @run_block,
           verify_block: @verify_block
         )
-      end
-
-      private
-
-      def arbitrary?(obj)
-        obj.respond_to?(:sample) || (obj.respond_to?(:generate) && obj.respond_to?(:shrink))
       end
     end
   end

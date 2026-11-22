@@ -47,6 +47,13 @@ RSpec.describe Pbt::Stateful::CommandBuilder do
 
       expect {
         build_command do |c|
+          c.arguments [1, 2, 3]
+          c.run { nil }
+        end
+      }.to raise_error(Pbt::Stateful::InvalidSpec, /must be an arbitrary/)
+
+      expect {
+        build_command do |c|
           c.arguments(Pbt.integer, x: Pbt.integer)
           c.run { nil }
         end
