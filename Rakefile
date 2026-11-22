@@ -7,7 +7,16 @@ RSpec::Core::RakeTask.new(:spec)
 
 require "standard/rake"
 
-task default: %i[spec standard]
+desc "Validate RBS type signatures"
+task :rbs do
+  require "rbs"
+  args = ["-I", "sig", "-r", "date"]
+  args += ["-r", "set"] if RBS::Repository.default.lookup("set", nil)
+  args << "validate"
+  sh "bundle", "exec", "rbs", *args
+end
+
+task default: %i[spec standard rbs]
 
 namespace :benchmark do
   task all: ["success:simple", "success:cpu_bound", "success:io_bound", "failure:simple"]

@@ -1,0 +1,241 @@
+module Pbt
+  module Stateful
+    type failure_stage = :sut | :run | :verify | :invariant | :teardown
+
+    class InvalidSpec < InvalidConfiguration
+    end
+
+    class GenerationError < StandardError
+    end
+
+    class ModelError < StandardError
+    end
+
+    class FailureSignature < Data
+      attr_reader stage: failure_stage
+      attr_reader target: Symbol | String | nil
+      attr_reader exception_class: singleton(Exception)
+
+      def initialize: (stage: failure_stage, target: Symbol | String | nil, exception_class: singleton(Exception)) -> void
+      def with: (?stage: failure_stage, ?target: Symbol | String | nil, ?exception_class: singleton(Exception)) -> FailureSignature
+    end
+
+    class StepFailure < StandardError
+      attr_reader step_index: Integer?
+      attr_reader step: Step?
+      attr_reader stage: failure_stage
+      attr_reader target: Symbol | String | nil
+      attr_reader signature: FailureSignature
+      attr_reader teardown_error: Exception?
+
+      def initialize: (
+        String message,
+        step_index: Integer?,
+        step: Step?,
+        stage: failure_stage,
+        target: Symbol | String | nil,
+        exception_class: singleton(Exception),
+        ?teardown_error: Exception?
+      ) -> void
+
+      def attach_teardown_error: (Exception error) -> self
+      def message: () -> String
+    end
+
+    class Ref < Data
+      attr_reader step_id: Integer
+
+      def initialize: (step_id: Integer) -> void
+      def with: (?step_id: Integer) -> Ref
+      def to_s: () -> String
+      alias inspect to_s
+    end
+
+    class Step < Data
+      attr_reader id: Integer
+      attr_reader command: Symbol
+      attr_reader args: untyped
+
+      def initialize: (id: Integer, command: Symbol, args: untyped) -> void
+      def with: (?id: Integer, ?command: Symbol, ?args: untyped) -> Step
+      def format: (?assign: bool) -> String
+      def to_s: () -> String
+    end
+
+    class Run < Data
+      attr_reader initial_state: untyped
+      attr_reader steps: Array[Step]
+
+      def initialize: (initial_state: untyped, steps: Array[Step]) -> void
+      def with: (?initial_state: untyped, ?steps: Array[Step]) -> Run
+      def size: () -> Integer
+      def empty?: () -> bool
+      def command_names: () -> Array[Symbol]
+      def format: (?failed_step_index: Integer?, ?failed_stage: failure_stage?) -> String
+      def to_s: () -> String
+      alias inspect to_s
+    end
+
+    class Context < Data
+      attr_reader step: Step
+      attr_reader before: untyped
+      attr_reader after: untyped
+      attr_reader args: untyped
+      attr_reader result: untyped
+      attr_reader sut: untyped
+
+      def initialize: (
+        step: Step,
+        before: untyped,
+        after: untyped,
+        args: untyped,
+        result: untyped,
+        sut: untyped
+      ) -> void
+
+      def with: (
+        ?step: Step,
+        ?before: untyped,
+        ?after: untyped,
+        ?args: untyped,
+        ?result: untyped,
+        ?sut: untyped
+      ) -> Context
+    end
+
+    module Resolver
+      def self.arbitrary?: (untyped obj) -> bool
+      def self.deep_dup: (untyped obj, ?Hash[untyped, untyped] cache) -> untyped
+      def self.resolve: (untyped obj, Hash[Integer, untyped] env, ?detach: bool, ?cache: Hash[untyped, untyped]) -> untyped
+      def self.collect_ref_ids: (untyped obj, ?Set[Integer] ids, ?Hash[untyped, bool] visited) -> Set[Integer]
+      def self.referenced_step_ids: (Array[Step] steps) -> Set[Integer]
+      def self.format_value: (untyped obj, ?Hash[untyped, bool] visited) -> String
+      def self.deep_freeze: (untyped obj) -> untyped
+      def self.invoke_with_arity: (untyped callable, *untyped args) -> untyped
+    end
+
+    class Command
+      attr_reader name: Symbol
+      attr_reader weight: Integer
+
+      def initialize: (
+        name: Symbol,
+        weight: Integer,
+        guard_block: Proc?,
+        arguments_source: untyped,
+        precondition_block: Proc?,
+        next_state_block: Proc?,
+        run_block: Proc,
+        verify_block: Proc?
+      ) -> void
+
+      def guard?: (untyped state) -> bool
+      def arguments_for: (untyped state) -> Arbitrary::_Arbitrary[untyped]
+      def precondition?: (untyped state, untyped args) -> bool
+      def next_state: (untyped state, untyped args, Ref ref) -> untyped
+      def run!: (untyped sut, untyped concrete_args) -> untyped
+      def verify!: (Context context) -> void
+    end
+
+    class CommandBuilder
+      def initialize: (name: Symbol, weight: Integer) -> void
+      def guard: () { (untyped state) -> boolish } -> void
+      def arguments: (Arbitrary::_Arbitrary[untyped] arb) -> void
+                   | (**Arbitrary::_Arbitrary[untyped] kwargs) -> void
+                   | () { (untyped state) -> Arbitrary::_Arbitrary[untyped] } -> void
+      def precondition: () { (untyped state, untyped args) -> boolish } -> void
+      def next_state: () { (untyped state, untyped args, Ref ref) -> untyped } -> void
+      def run: () { (untyped sut, untyped args) -> untyped } -> void
+      def verify: () { (Context ctx) -> untyped } -> void
+      def build: () -> Command
+    end
+
+    class Invariant < Data
+      attr_reader name: Symbol | String | nil
+      attr_reader block: Proc
+
+      def initialize: (name: Symbol | String | nil, block: Proc) -> void
+      def with: (?name: Symbol | String | nil, ?block: Proc) -> Invariant
+    end
+
+    class Spec
+      attr_reader commands: Array[Command]
+      attr_reader invariants: Array[Invariant]
+
+      def initialize: (
+        initial_state_kind: :constant | :block | :arbitrary,
+        initial_state_source: untyped,
+        lifecycle: Proc,
+        commands: Array[Command],
+        invariants: Array[Invariant]
+      ) -> void
+
+      def arbitrary_initial_state?: () -> bool
+      def sample_initial_state: (Random rng) -> [untyped, Arbitrary::Sample[untyped]?]
+      def command_by_name: (Symbol name) -> Command
+      def with_sut: (untyped initial_state) { (untyped sut) -> untyped } -> void
+    end
+
+    class SpecBuilder
+      def initialize: () -> void
+      def initial_state: (untyped value_or_arb) -> void
+                       | () { () -> untyped } -> void
+      def sut: () { (untyped initial_state) -> untyped } -> void
+      def teardown: () { (untyped sut) -> untyped } -> void
+      def around: () { (untyped initial_state, ^(untyped) -> void run) -> untyped } -> void
+      def command: (Symbol name, ?weight: Integer) { (CommandBuilder) -> untyped } -> void
+      def invariant: (?Symbol | String | nil name) { (untyped state, untyped sut) -> untyped } -> void
+      def build: () -> Spec
+    end
+
+    class ShrinkSession
+      attr_reader attempts: Integer
+      attr_reader max_attempts: Integer
+
+      def initialize: (max_attempts: Integer) -> void
+      def exhausted?: () -> bool
+      def seen?: (Run run) -> bool
+      def mark_seen: (Run run) -> void
+      def consume_attempt!: () -> Integer
+    end
+
+    class RunSample < Arbitrary::Sample[Run]
+      attr_reader initial_state_sample: Arbitrary::Sample[untyped]?
+      attr_reader step_samples: Hash[Integer, Arbitrary::Sample[untyped]]
+      attr_reader session: ShrinkSession
+
+      def initialize: (
+        Run run,
+        initial_state_sample: Arbitrary::Sample[untyped]?,
+        step_samples: Hash[Integer, Arbitrary::Sample[untyped]],
+        session: ShrinkSession
+      ) -> void
+
+      def run: () -> Run
+    end
+
+    class Shrinker
+      def initialize: (Spec spec) -> void
+      def shrink: (RunSample run_sample, failure: Exception?) -> Enumerator[RunSample, untyped]
+      def valid_run?: (Run run) -> bool
+    end
+
+    class Property
+      attr_reader spec: Spec
+      attr_reader max_steps: Integer
+      attr_reader min_steps: Integer
+      attr_reader max_shrink_attempts: Integer
+
+      def initialize: (spec: Spec, ?max_steps: Integer, ?min_steps: Integer, ?max_shrink_attempts: Integer) -> void
+      def stateful?: () -> true
+      def generate: (?Random rng) -> Run
+      def generate_for_check: (?Random rng) -> RunSample
+      def run: (Run run) -> void
+      def replay: (Run run) -> void
+      def same_failure?: (Exception initial_err, Exception candidate_err) -> bool
+      def shrink_case: (Check::Case test_case) -> Enumerator[RunSample, untyped]
+      def shrink: (Run run) -> Enumerator[Run, untyped]
+      def run_in_ractor: (untyped run) -> bot
+    end
+  end
+end

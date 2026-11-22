@@ -1,0 +1,139 @@
+module Pbt
+  module Arbitrary
+    class EmptyDomainError < ArgumentError
+    end
+
+    class FilterExhaustedError < StandardError
+    end
+
+    interface _Callable
+      def call: (*untyped, **untyped) -> untyped
+    end
+
+    interface _Generatable[out T]
+      def generate: (?Random rng) -> T
+    end
+
+    interface _Arbitrary[out T]
+      def generate: (?Random rng) -> T
+      def shrink: (untyped current) -> Enumerator[T, untyped]
+    end
+
+    class Sample[out T]
+      attr_reader value: T
+
+      def initialize: (T value) { () -> Enumerable[Sample[T]] } -> void
+      def shrink: () -> Enumerator[Sample[T], untyped]
+      def map: [U] () { (T) -> U } -> Sample[U]
+      def filter: () { (T) -> boolish } -> Sample[T]
+
+      def self.capture: [T] (_Arbitrary[T] arbitrary, Random rng) -> Sample[T]
+      def self.from_value: [T] (_Arbitrary[T] arbitrary, T value) -> Sample[T]
+      def self.contextual?: (untyped arbitrary) -> bool
+      def self.tuple: (Array[Sample[untyped]] samples) -> Sample[Array[untyped]]
+      def self.array: [T] (Array[Sample[T]] samples, _Arbitrary[Integer] length_arbitrary, Integer min_length) -> Sample[Array[T]]
+    end
+
+    class Arbitrary[out T = untyped]
+      def self.cover_result: (untyped arbitrary, untyped value) -> bool?
+
+      def generate: (?Random rng) -> T
+      def shrink: (untyped current) -> Enumerator[T, untyped]
+      def cover?: (untyped value) -> bool?
+      def sample: (?Random rng) -> Sample[T]
+      def contextual?: () -> bool
+      def map: [U] () { (T) -> U } -> MapArbitrary[U]
+             | [U] (^(T) -> U mapper, ?(^(U) -> untyped)? unmapper) -> MapArbitrary[U]
+             | (_Callable mapper, ?_Callable? unmapper) -> MapArbitrary[untyped]
+      def filter: (?max_attempts: Integer) { (T) -> boolish } -> FilterArbitrary[T]
+    end
+
+    class IntegerArbitrary < Arbitrary[Integer]
+      def initialize: (Integer min, Integer max) -> void
+      def shrink: (Integer current, ?target: Integer?) -> Enumerator[Integer, untyped]
+    end
+
+    class ChooseArbitrary < Arbitrary[Integer | Float]
+      def initialize: (Range[Integer] | Range[Float] range) -> void
+    end
+
+    class ConstantArbitrary[out T = untyped] < Arbitrary[T]
+      def initialize: (T val) -> void
+    end
+
+    class ConstantFromArbitrary[out T = untyped] < Arbitrary[T]
+      def initialize: (Array[T] choices) -> void
+    end
+
+    class ArrayArbitrary[out T = untyped] < Arbitrary[Array[T]]
+      def initialize: (_Arbitrary[T] value_arb, ?Integer min_length, ?Integer max_length) -> void
+    end
+
+    class TupleArbitrary < Arbitrary[Array[untyped]]
+      def initialize: (*_Arbitrary[untyped] arbs) -> void
+    end
+
+    class FixedHashArbitrary < Arbitrary[Hash[untyped, untyped]]
+      def initialize: (Hash[untyped, _Arbitrary[untyped]] hash) -> void
+    end
+
+    class OneOfArbitrary[out T = untyped] < Arbitrary[T]
+      def initialize: (Array[_Arbitrary[T]] arbitraries) -> void
+    end
+
+    class FrequencyArbitrary[out T = untyped] < Arbitrary[T]
+      def initialize: (Array[[Integer, _Arbitrary[T]]] choices) -> void
+    end
+
+    class MapArbitrary[out T = untyped] < Arbitrary[T]
+      def initialize: (_Arbitrary[untyped] arb, _Callable mapper, ?_Callable? unmapper, ?bijective: bool) -> void
+    end
+
+    class FloatArbitrary < MapArbitrary[Float]
+      def initialize: () -> void
+    end
+
+    class FilterArbitrary[out T = untyped] < Arbitrary[T]
+      DEFAULT_MAX_ATTEMPTS: Integer
+
+      def initialize: (_Arbitrary[T] arb, ?max_attempts: Integer) { (T) -> boolish } -> void
+    end
+
+    module ArbitraryMethods
+      def integer: (?min: Integer, ?max: Integer) -> IntegerArbitrary
+      def nat: (?max: Integer) -> IntegerArbitrary
+      def array: [T] (_Arbitrary[T] arb, ?min: Integer, ?max: Integer, ?empty: bool) -> ArrayArbitrary[T]
+      def tuple: (*_Arbitrary[untyped] arbs) -> TupleArbitrary
+      def fixed_hash: (Hash[untyped, _Arbitrary[untyped]] hash) -> FixedHashArbitrary
+      def choose: (Range[Integer] | Range[Float] range) -> ChooseArbitrary
+      def constant_from: [T] (*T choices) -> ConstantFromArbitrary[T]
+      def one_of: [T] (*_Arbitrary[T] arbitraries) -> OneOfArbitrary[T]
+      def frequency: [T] (*[Integer, _Arbitrary[T]] choices) -> FrequencyArbitrary[T]
+      def hexa: () -> ConstantFromArbitrary[String]
+      def hexa_string: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[String]
+      def char: () -> MapArbitrary[String]
+      def alphanumeric_char: () -> ConstantFromArbitrary[String]
+      def alphanumeric_string: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[String]
+      def ascii_char: () -> ConstantFromArbitrary[String]
+      def ascii_string: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[String]
+      def printable_ascii_char: () -> ConstantFromArbitrary[String]
+      def printable_ascii_string: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[String]
+      def printable_char: () -> ConstantFromArbitrary[String]
+      def printable_string: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[String]
+      def symbol: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[Symbol]
+      def float: () -> FloatArbitrary
+      def set: [T] (_Arbitrary[T] arb, ?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[Set[T]]
+      def hash: () -> Integer
+              | [K, V] (_Arbitrary[K] key_arbitrary, _Arbitrary[V] value_arbitrary, ?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[Hash[K, V]]
+      def boolean: () -> ConstantFromArbitrary[bool]
+      def constant: [T] (T val) -> ConstantArbitrary[T]
+      def nil: () -> ConstantArbitrary[nil]
+      def date: (?base_date: Date, ?past_offset_days: Integer, ?future_offset_days: Integer) -> MapArbitrary[Date]
+      def past_date: (?base_date: Date, ?past_offset_days: Integer) -> MapArbitrary[Date]
+      def future_date: (?base_date: Date, ?future_offset_days: Integer) -> MapArbitrary[Date]
+      def time: (?base_time: Time, ?past_offset_seconds: Integer, ?future_offset_seconds: Integer) -> MapArbitrary[Time]
+      def past_time: (?base_time: Time, ?past_offset_seconds: Integer) -> MapArbitrary[Time]
+      def future_time: (?base_time: Time, ?future_offset_seconds: Integer) -> MapArbitrary[Time]
+    end
+  end
+end

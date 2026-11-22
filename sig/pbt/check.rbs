@@ -1,0 +1,74 @@
+module Pbt
+  module Check
+    FATAL_EXCEPTIONS: Array[singleton(Exception)]
+
+    type worker_mode = :none | :ractor
+
+    interface _Property
+      def generate: (?Random rng) -> untyped
+      def shrink: (untyped val) -> Enumerator[untyped, untyped]
+      def run: (untyped val) -> untyped
+      def run_in_ractor: (untyped val) -> Ractor
+    end
+
+    class Configuration < Struct[untyped]
+      attr_accessor verbose: bool
+      attr_accessor worker: worker_mode
+      attr_accessor num_runs: Integer
+      attr_accessor seed: Integer
+      attr_accessor thread_report_on_exception: bool
+      attr_accessor max_skips: Integer?
+
+      def initialize: (
+        ?verbose: bool,
+        ?worker: worker_mode,
+        ?num_runs: Integer,
+        ?seed: Integer,
+        ?thread_report_on_exception: bool,
+        ?max_skips: Integer?
+      ) -> void
+    end
+
+    module ConfigurationMethods
+      def configuration: () -> Configuration
+      def configure: () { (Configuration) -> untyped } -> untyped
+    end
+
+    class Case < Struct[untyped]
+      attr_accessor val: untyped
+      attr_accessor ractor: Ractor?
+      attr_accessor exception: Exception?
+      attr_accessor index: Integer?
+      attr_accessor sample: Arbitrary::Sample[untyped]?
+    end
+
+    class Property
+      def initialize: (Arbitrary::_Arbitrary[untyped] arb, ?keyword_args: bool, ?splat_args: bool) { (*untyped, **untyped) -> untyped } -> void
+      def generate: (?Random rng) -> untyped
+      def generate_for_check: (Random rng) -> untyped
+      def shrink: (untyped val) -> Enumerator[untyped, untyped]
+      def run: (untyped val) -> void
+      def run_in_ractor: (untyped val) -> Ractor
+    end
+
+    module RunnerMethods
+      def assert: (
+        ?verbose: bool,
+        ?worker: worker_mode,
+        ?num_runs: Integer,
+        ?seed: Integer,
+        ?thread_report_on_exception: bool,
+        ?max_skips: Integer?
+      ) { () -> _Property } -> void
+
+      def check: (
+        ?verbose: bool,
+        ?worker: worker_mode,
+        ?num_runs: Integer,
+        ?seed: Integer,
+        ?thread_report_on_exception: bool,
+        ?max_skips: Integer?
+      ) { () -> _Property } -> Reporter::RunDetails
+    end
+  end
+end

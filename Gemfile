@@ -5,6 +5,7 @@ source "https://rubygems.org"
 gemspec
 
 gem "rake"
+gem "rbs"
 gem "rspec"
 gem "standard"
 gem "benchmark-ips"

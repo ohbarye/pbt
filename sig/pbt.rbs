@@ -1,4 +1,43 @@
 module Pbt
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  class PropertyFailure < StandardError
+  end
+
+  class TooManySkipsError < PropertyFailure
+  end
+
+  class PreconditionNotMet < StandardError
+  end
+
+  class InvalidConfiguration < StandardError
+  end
+
+  extend Arbitrary::ArbitraryMethods
+  extend Check::RunnerMethods
+  extend Check::ConfigurationMethods
+
+  def self.assume: (untyped condition) -> void
+
+  def self.property: [T] (Arbitrary::_Arbitrary[T] arb) { (T) -> untyped } -> Check::Property
+                   | [T1, T2] (Arbitrary::_Arbitrary[T1] arb1, Arbitrary::_Arbitrary[T2] arb2) { (T1, T2) -> untyped } -> Check::Property
+                   | [T1, T2, T3] (Arbitrary::_Arbitrary[T1] arb1, Arbitrary::_Arbitrary[T2] arb2, Arbitrary::_Arbitrary[T3] arb3) { (T1, T2, T3) -> untyped } -> Check::Property
+                   | (*Arbitrary::_Arbitrary[untyped] args) { (*untyped) -> untyped } -> Check::Property
+                   | (**Arbitrary::_Arbitrary[untyped] kwargs) { (**untyped) -> untyped } -> Check::Property
+
+  def self.stateful: (?max_steps: Integer, ?min_steps: Integer, ?max_shrink_attempts: Integer) { (Stateful::SpecBuilder) -> untyped } -> Stateful::Property
+
+  def self.statistics: [T] (Arbitrary::_Generatable[T] arbitrary, ?num_runs: Integer, ?seed: Integer) -> Statistics[T]
+                     | [T, L] (Arbitrary::_Generatable[T] arbitrary, ?num_runs: Integer, ?seed: Integer) { (T) -> L } -> Statistics[L]
+
+  class Statistics[out L = untyped]
+    attr_reader seed: Integer
+    attr_reader num_runs: Integer
+    attr_reader counts: Hash[L, Integer]
+
+    def initialize: (Arbitrary::_Generatable[L] arbitrary, num_runs: Integer, seed: Integer) -> void
+                  | [T] (Arbitrary::_Generatable[T] arbitrary, num_runs: Integer, seed: Integer) { (T) -> L } -> void
+
+    def percentages: () -> Hash[L, Float]
+  end
 end
