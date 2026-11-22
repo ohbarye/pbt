@@ -142,6 +142,9 @@ Pbt.hash(Pbt.symbol, Pbt.integer).generate             # => {atq: 121, ygab: -11
 
 Pbt.constant_from(:a, 1, 0.1).generate                 # => :a or 1 or 0.1
 Pbt.one_of(Pbt.integer, Pbt.constant(nil)).generate    # => 42 or nil
+
+Pbt.integer(min: 0, max: 10).map { |n| n * 2 }.generate # => 8
+Pbt.integer(min: 0, max: 10).filter(&:even?).generate   # => 4
 ````
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.

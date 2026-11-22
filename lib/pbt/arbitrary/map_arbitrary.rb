@@ -6,8 +6,11 @@ module Pbt
     class MapArbitrary < Arbitrary
       # @param arb [Arbitrary] Arbitrary to generate values to be mapped.
       # @param mapper [Proc] Proc to map generated values. Mainly used for generation.
-      # @param unmapper [Proc] Proc to unmap generated values. Used for shrinking.
-      def initialize(arb, mapper, unmapper)
+      # @param unmapper [Proc, nil] Optional proc to unmap generated values for bare `#shrink`.
+      def initialize(arb, mapper, unmapper = nil)
+        raise ArgumentError, "mapper must be callable" unless mapper.respond_to?(:call)
+        raise ArgumentError, "unmapper must be callable or nil" if !unmapper.nil? && !unmapper.respond_to?(:call)
+
         @arb = arb
         @mapper = mapper
         @unmapper = unmapper
@@ -18,16 +21,20 @@ module Pbt
         @mapper.call(@arb.generate(rng))
       end
 
+      # @private
       def contextual?
-        Sample.contextual?(@arb)
+        @unmapper.nil? || Sample.contextual?(@arb)
       end
 
+      # @see Arbitrary#sample
       def sample(rng = Random.new)
-        Sample.capture(@arb, rng).map(&@mapper)
+        Sample.capture(@arb, rng).map { |value| @mapper.call(value) }
       end
 
       # @see Arbitrary#shrink
       def shrink(current)
+        return [].each if @unmapper.nil?
+
         Enumerator.new do |y|
           @arb.shrink(@unmapper.call(current)).each do |v|
             y.yield @mapper.call(v)
