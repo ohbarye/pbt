@@ -1,15 +1,19 @@
 ## [Unreleased]
 
-- [Breaking change] Require Ruby `>= 3.3` [#66](https://github.com/ohbarye/pbt/pull/66)
+## [0.8.0] - 2026-11-22
+
+- [Breaking change] Drop support for Ruby 3.2 and earlier (EOL); Ruby 3.3 or later is now required, and Ruby 4.1.0-preview1 is added to CI [#66](https://github.com/ohbarye/pbt/pull/66)
 - [Breaking change] Split literal constant selection into `Pbt.constant_from(*choices)` and change `Pbt.one_of(*arbitraries)` to select uniformly among arbitraries with contextual shrinking [#70](https://github.com/ohbarye/pbt/pull/70)
 - Add `Pbt.frequency` weighted generators with contextual lazy shrink trees (`Arbitrary::Sample`) [#61](https://github.com/ohbarye/pbt/pull/61)
 - Add `Pbt.statistics` for reproducible generator distribution inspection [#62](https://github.com/ohbarye/pbt/pull/62)
 - Allow `Arbitrary#map` without an `unmapper` and with block syntax (`arb.map { |v| ... }`), shrinking via `Sample` provenance [#71](https://github.com/ohbarye/pbt/pull/71)
 - Add 3-valued `Arbitrary#cover?(value)` (including `FloatArbitrary` for `Pbt.float`) and `RunnerIterator` `same_failure?` / `shrink_case` hooks [#72](https://github.com/ohbarye/pbt/pull/72)
 - Document v1 Property DSL contract and fix positional Hash / strict lambda argument passing in `Check::Property#run` [#73](https://github.com/ohbarye/pbt/pull/73)
-
-- Add Ruby 4.1.0-preview1 to the CI test matrix.
-- [Breaking change] Drop support for Ruby 3.2 and earlier (EOL). Ruby 3.3 or later is now required.
+- Re-raise fatal exceptions (`SystemExit`, `SignalException`, `NoMemoryError`) in runners without shrinking [#74](https://github.com/ohbarye/pbt/pull/74)
+- Bound `FilterArbitrary` generation retries with `max_attempts:` (raising `Pbt::Arbitrary::FilterExhaustedError`) to prevent infinite loops [#75](https://github.com/ohbarye/pbt/pull/75)
+- Improve array shrinking (continue element shrinking at `min_length` and support non-contiguous element deletion) and fix `Pbt.nat` default `max` [#76](https://github.com/ohbarye/pbt/pull/76)
+- Add `Pbt.assume` precondition helper with `max_skips` guard (`Pbt::TooManySkipsError`) and `RunDetails#num_skips` [#77](https://github.com/ohbarye/pbt/pull/77)
+- Note: the current `Pbt.stateful(model:, sut:)` API is planned to be replaced with a redesigned DSL in v0.9.0 ([#67](https://github.com/ohbarye/pbt/issues/67)).
 
 ## [0.7.0] - 2026-04-04
 
