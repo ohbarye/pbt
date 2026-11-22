@@ -5,6 +5,7 @@ require "pbt/arbitrary/sample"
 module Pbt
   module Arbitrary
     class EmptyDomainError < ArgumentError; end
+    class FilterExhaustedError < StandardError; end
 
     # Abstract class for generating random values on type `T`.
     #
@@ -101,10 +102,11 @@ module Pbt
       #   even_integer_generator = integer_generator.filter { |x| x.even? }
       #   # or `integer_generator.filter(&:even?)`
       #
+      # @param max_attempts [Integer] Maximum generation attempts before raising `FilterExhaustedError`.
       # @param refinement [Proc] Predicate proc to test each produced element. Return true to keep the element, false otherwise.
       # @return [FilterArbitrary] New arbitrary filtered using `refinement`.
-      def filter(&refinement)
-        FilterArbitrary.new(self, &refinement)
+      def filter(max_attempts: FilterArbitrary::DEFAULT_MAX_ATTEMPTS, &refinement)
+        FilterArbitrary.new(self, max_attempts: max_attempts, &refinement)
       end
     end
   end
