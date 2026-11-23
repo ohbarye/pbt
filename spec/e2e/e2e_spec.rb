@@ -134,10 +134,10 @@ RSpec.describe Pbt do
               end
             }.to raise_error(Pbt::PropertyFailure) do |e|
               expect(e.message).to include <<~MSG.chomp
-                Property failed after 1 test(s)
+                Property failed after 2 test(s)
                   seed: 152305683944880796308915131809827264455
-                  counterexample: [-1, -2]
-                  Shrunk 37 time(s)
+                  counterexample: [-2, -1]
+                  Shrunk 12 time(s)
                   Got RuntimeError: strings should be sorted as numbers ["-1", "-2"]
               MSG
             end
@@ -158,18 +158,19 @@ RSpec.describe Pbt do
             }.to raise_error(Pbt::PropertyFailure) do |e|
               # common part
               expect(e.message).to include <<~MSG
-                Property failed after 1 test(s)
+                Property failed after 2 test(s)
                   seed: 152305683944880796308915131809827264455
-                  counterexample: [-1, -2]
-                  Shrunk 37 time(s)
+                  counterexample: [-2, -1]
+                  Shrunk 12 time(s)
                   Got RuntimeError: strings should be sorted as numbers ["-1", "-2"]
               MSG
 
               # verbose part
-              expect(e.message).to include("Encountered failures were:\n- [152477, 666997, -531468, -92182, 623948, 425913, 656138, 856463, -64529]")
-              expect(e.message).to include("- [-1, -2]\n\nExecution summary:\n. \x1b[31m\u00D7\x1b[0m [152477, 666997, -531468, -92182, 623948, 425913, 656138, 856463, -64529]")
-              expect(e.message).to include("\x1b[31m\u00D7\x1b[0m [-1, -2]")
-              expect(e.message).to include("\x1b[32m\u221A\x1b[0m [-1, 0]")
+              expect(e.message).to include("Encountered failures were:\n- [-5092, -1, -45844]")
+              expect(e.message).to include("- [-2, -1]\n\nExecution summary:\n")
+              expect(e.message).to include(". \x1b[31m\u00D7\x1b[0m [-5092, -1, -45844]")
+              expect(e.message).to include("\x1b[31m\u00D7\x1b[0m [-2, -1]")
+              expect(e.message).to include("\x1b[32m\u221A\x1b[0m [-2, 0]")
             end
           end
         end

@@ -4,13 +4,22 @@ module Pbt
   module Arbitrary
     # Generates a random value from a range.
     class ChooseArbitrary < Arbitrary
+      EDGE_CASE_DOMAIN_THRESHOLD = 20
+      EDGE_CASE_BIAS_DENOMINATOR = 5
+      private_constant :EDGE_CASE_DOMAIN_THRESHOLD, :EDGE_CASE_BIAS_DENOMINATOR
+
       # @param range [Range<Integer>, Range<Float>]
       def initialize(range)
         @range = range
+        @edge_cases = build_edge_cases
       end
 
       # @see Arbitrary#generate
       def generate(rng = Random.new)
+        if @edge_cases && rng.rand(EDGE_CASE_BIAS_DENOMINATOR).zero?
+          return @edge_cases[rng.rand(@edge_cases.size)]
+        end
+
         if float_range? && @range.exclude_end?
           return sample_exclusive_float(rng)
         end
@@ -71,6 +80,29 @@ module Pbt
 
       def empty_range?
         !@range.begin.nil? && !@range.end.nil? && !@range.cover?(@range.begin)
+      end
+
+      def build_edge_cases
+        return nil if @range.begin.nil? || @range.end.nil? || empty_range?
+
+        if integer_range?
+          min = @range.begin
+          effective_max = @range.exclude_end? ? (@range.end - 1) : @range.end
+          return nil if min > effective_max || (effective_max - min + 1) <= EDGE_CASE_DOMAIN_THRESHOLD
+
+          [0, 1, -1, min, effective_max].uniq.select { |v| v.between?(min, effective_max) }.freeze
+        elsif float_range?
+          lo = @range.begin.to_f
+          hi = @range.end.to_f
+          return nil unless lo.finite? && hi.finite? && lo < hi
+
+          candidates = [0.0, 1.0, -1.0, lo, hi]
+          candidates << -0.0 if lo < 0.0 && hi >= 0.0
+          edges = candidates
+            .select { |v| @range.cover?(v) }
+            .uniq { |v| v.zero? ? (1.0 / v) : v }
+          edges.empty? ? nil : edges.freeze
+        end
       end
 
       def sample_exclusive_float(rng)

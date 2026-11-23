@@ -9,12 +9,11 @@ module Pbt
         raise EmptyDomainError, "constant_from requires at least one choice" if choices.empty?
 
         @choices = choices.dup
-        @idx_arb = IntegerArbitrary.new(0, @choices.size - 1)
       end
 
       # @see Arbitrary#generate
       def generate(rng = Random.new)
-        @choices[@idx_arb.generate(rng)]
+        @choices[rng.rand(@choices.size)]
       end
 
       # @see Arbitrary#cover?
@@ -28,8 +27,9 @@ module Pbt
         return Enumerator.new {} if index.nil?
 
         # Shrinks to values earlier in the list of `choices`.
+        idx_arb = IntegerArbitrary.new(0, @choices.size - 1)
         Enumerator.new do |y|
-          @idx_arb.shrink(index).each do |idx|
+          idx_arb.shrink(index).each do |idx|
             y << @choices[idx]
           end
         end
