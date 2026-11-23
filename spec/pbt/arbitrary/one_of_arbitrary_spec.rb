@@ -58,7 +58,7 @@ RSpec.describe Pbt::Arbitrary::OneOfArbitrary do
       second = arb.sample(rng)
       expect(first.value).to eq(10)
       expect(second.value).to eq(10)
-      expect(first.shrink.map(&:value)).to eq([5, 3, 2, 1, 0])
+      expect(first.shrink.map(&:value)).to eq([0, 5, 7, 8, 9])
       expect(second.shrink.to_a).to eq([])
     end
 
@@ -89,7 +89,7 @@ RSpec.describe Pbt::Arbitrary::OneOfArbitrary do
       sample = Pbt.fixed_hash(data: mapped).sample(rng)
       expect(sample.value).to eq({data: "10"})
       expect(sample.shrink.map(&:value)).to eq([
-        {data: "5"}, {data: "3"}, {data: "2"}, {data: "1"}, {data: "0"}
+        {data: "0"}, {data: "5"}, {data: "7"}, {data: "8"}, {data: "9"}
       ])
     end
   end

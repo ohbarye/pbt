@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Improve `IntegerArbitrary#shrink` to yield binary-search candidates toward `target`, enabling greedy shrinking to converge to exact failure thresholds ([#82](https://github.com/ohbarye/pbt/issues/82)).
+
 ## [0.9.0] - 2026-11-23
 
 - [Breaking change] Replace `Pbt.stateful(model:, sut:)` with a redesigned yield-based DSL (`Pbt.stateful(max_steps:, min_steps:, max_shrink_attempts:) { |m| ... }`) featuring `initial_state` (value, block, or shrinkable `Arbitrary`), `sut`+`teardown` / `around` lifecycle, weighted commands (`guard`, `arguments`, `precondition`, `next_state`, `run`, `verify`), `invariant`s, symbolic `Ref`s, best-first shrinking with offline `cover?` validation and `FailureSignature` equivalence, `property.replay`, `Pbt.statistics` support, and multiline counterexample reporting [#67](https://github.com/ohbarye/pbt/issues/67) [#79](https://github.com/ohbarye/pbt/pull/79) [#80](https://github.com/ohbarye/pbt/pull/80).

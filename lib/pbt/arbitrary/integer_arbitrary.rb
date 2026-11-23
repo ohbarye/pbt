@@ -36,10 +36,7 @@ module Pbt
 
       # @see Arbitrary#shrink
       def shrink(current, target: nil)
-        # If no target is specified, use the appropriate bound as target
         target ||= DEFAULT_TARGET.clamp(@min, @max)
-
-        # Ensure target is within bounds
         target = target.clamp(@min, @max)
 
         gap = current - target
@@ -48,16 +45,19 @@ module Pbt
         is_positive_gap = gap > 0
 
         Enumerator.new do |y|
-          while (diff = (current - target).abs) > 1
-            halved = diff / 2
-            current -= is_positive_gap ? halved : -halved
-            # Ensure current stays within bounds
-            current = current.clamp(@min, @max)
-            y.yield current
-          end
-          # Only yield target if it's different from current
-          if current != target
-            y.yield target
+          last_yielded = target
+          y.yield target
+
+          step = gap.abs
+          while step > 1
+            step = step.is_a?(Integer) ? ((step + 1) / 2) : (step / 2.0)
+            break if step < 1
+
+            candidate = (is_positive_gap ? (current - step) : (current + step)).clamp(@min, @max)
+            if candidate != current && candidate != last_yielded
+              y.yield candidate
+              last_yielded = candidate
+            end
           end
         end
       end

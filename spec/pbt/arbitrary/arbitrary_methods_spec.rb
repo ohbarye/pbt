@@ -34,7 +34,7 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
 
       it "returns an Enumerator that iterates hexadecimal character shrinking towards lower codepoint" do
         arb = Pbt.hexa
-        expect(arb.shrink("f").to_a).to eq ["8", "4", "2", "1", "0"]
+        expect(arb.shrink("f").to_a).to eq ["0", "7", "b", "d", "e"]
       end
     end
   end
@@ -76,7 +76,7 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
 
       it "returns an Enumerator that iterates characters shrinking towards lower codepoint" do
         arb = Pbt.char
-        expect(arb.shrink("z").to_a).to eq ["=", "\u001F", "\u0010", "\b", "\u0004", "\u0002", "\u0001", "\u0000"]
+        expect(arb.shrink("z").to_a).to eq ["\u0000", "=", "[", "j", "r", "v", "x", "y"]
       end
     end
   end
@@ -253,7 +253,10 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
 
       it "returns an Enumerator that iterates float shrinking towards zero" do
         arb = Pbt.float
-        expect(arb.shrink(-123.123456).to_a).to eq [-61.561728, -30.780864, -15.390432, -7.695216, -3.847608, -1.923804, -0.961902, 0.0]
+        shrunk = arb.shrink(-123.123456).to_a
+        expect(shrunk.first).to eq(0.0)
+        expect(shrunk).to all(be_between(-123.123456, 0.0))
+        expect(shrunk.size).to be >= 5
       end
     end
   end
@@ -274,19 +277,19 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       it "returns an Enumerator that iterates set shrinking towards empty" do
         arb = Pbt.set(Pbt.integer)
         expect(arb.shrink(Set.new([1, 2, -4])).to_a).to eq [
-          Set.new([1, 2]),
-          Set.new([2, -4]),
+          Set.new([]),
           Set.new([1]),
           Set.new([2]),
           Set.new([-4]),
-          Set.new([]),
+          Set.new([1, 2]),
+          Set.new([2, -4]),
           Set.new([1, -4]),
           Set.new([0, 2, -4]),
-          Set.new([1, -4]),
           Set.new([1, 0, -4]),
+          Set.new([1, -4]),
+          Set.new([1, 2, 0]),
           Set.new([1, 2, -2]),
-          Set.new([1, 2, -1]),
-          Set.new([1, 2, 0])
+          Set.new([1, 2, -3])
         ]
       end
     end
@@ -308,21 +311,21 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       it "returns an Enumerator that iterates hash with shrunken length or value" do
         arb = Pbt.hash(Pbt.symbol, Pbt.integer)
         expect(arb.shrink({a: 10, b: 20}).to_a).to eq [
+          {},
           {a: 10},
           {b: 20},
-          {},
-          {a: 5, b: 20},
-          {a: 3, b: 20},
-          {a: 2, b: 20},
-          {a: 1, b: 20},
           {a: 0, b: 20},
+          {a: 5, b: 20},
+          {a: 7, b: 20},
+          {a: 8, b: 20},
+          {a: 9, b: 20},
           {a: 20},
+          {a: 10, b: 0},
           {a: 10, b: 10},
-          {a: 10, b: 5},
-          {a: 10, b: 3},
-          {a: 10, b: 2},
-          {a: 10, b: 1},
-          {a: 10, b: 0}
+          {a: 10, b: 15},
+          {a: 10, b: 17},
+          {a: 10, b: 18},
+          {a: 10, b: 19}
         ]
       end
     end
@@ -397,11 +400,11 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       it "returns an Enumerator that iterates date shrinking towards base_date" do
         arb = Pbt.date(base_date: Date.new(2024, 4, 6))
         expect(arb.shrink(Date.new(2024, 4, 20)).to_a).to eq [
+          Date.new(2024, 4, 6),
           Date.new(2024, 4, 13),
-          Date.new(2024, 4, 10),
-          Date.new(2024, 4, 8),
-          Date.new(2024, 4, 7),
-          Date.new(2024, 4, 6)
+          Date.new(2024, 4, 16),
+          Date.new(2024, 4, 18),
+          Date.new(2024, 4, 19)
         ]
       end
     end
@@ -472,32 +475,16 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       end
 
       it "returns an Enumerator that iterates time shrinking towards base_time" do
-        arb = Pbt.time(base_time: Time.new(2024, 1, 2, 3, 4, 5))
-        expect(arb.shrink(Time.new(2024, 2, 1)).to_a).to eq [
-          Time.new(2024, 1, 17, 0o1, 32, 3),
-          Time.new(2024, 1, 9, 14, 18, 4),
-          Time.new(2024, 1, 5, 20, 41, 5),
-          Time.new(2024, 1, 3, 23, 52, 35),
-          Time.new(2024, 1, 3, 1, 28, 20),
-          Time.new(2024, 1, 2, 14, 16, 13),
-          Time.new(2024, 1, 2, 8, 40, 9),
-          Time.new(2024, 1, 2, 5, 52, 7),
-          Time.new(2024, 1, 2, 4, 28, 6),
-          Time.new(2024, 1, 2, 3, 46, 6),
-          Time.new(2024, 1, 2, 3, 25, 6),
-          Time.new(2024, 1, 2, 3, 14, 36),
-          Time.new(2024, 1, 2, 3, 9, 21),
-          Time.new(2024, 1, 2, 3, 6, 43),
-          Time.new(2024, 1, 2, 3, 5, 24),
-          Time.new(2024, 1, 2, 3, 4, 45),
-          Time.new(2024, 1, 2, 3, 4, 25),
-          Time.new(2024, 1, 2, 3, 4, 15),
-          Time.new(2024, 1, 2, 3, 4, 10),
-          Time.new(2024, 1, 2, 3, 4, 8),
-          Time.new(2024, 1, 2, 3, 4, 7),
-          Time.new(2024, 1, 2, 3, 4, 6),
-          Time.new(2024, 1, 2, 3, 4, 5)
-        ]
+        base = Time.new(2024, 1, 2, 3, 4, 5)
+        current = Time.new(2024, 2, 1)
+        arb = Pbt.time(base_time: base)
+        shrunk = arb.shrink(current).to_a
+
+        expect(shrunk.first).to eq(base)
+        expect(shrunk.last).to eq(current - 1)
+        expect(shrunk).to eq(shrunk.sort)
+        expect(shrunk).to all(be >= base)
+        expect(shrunk).to all(be < current)
       end
     end
   end

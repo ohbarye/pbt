@@ -66,7 +66,7 @@ RSpec.describe Pbt::Arbitrary::FilterArbitrary do
 
     it "returns an Enumerator that iterates filtered values" do
       arb = Pbt.integer.filter { |n| n % 2 == 0 }
-      expect(arb.shrink(50).to_a).to eq [4, 2, 0]
+      expect(arb.shrink(50).to_a).to eq [0, 37, 43, 46, 48, 49].select(&:even?)
     end
 
     context "when current value and target is same" do

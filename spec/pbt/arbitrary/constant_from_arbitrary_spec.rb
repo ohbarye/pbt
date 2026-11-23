@@ -37,7 +37,7 @@ RSpec.describe Pbt::Arbitrary::ConstantFromArbitrary do
 
     it "shrinks towards earlier choices" do
       arb = Pbt::Arbitrary::ConstantFromArbitrary.new([:z, :a, :x, :y, :c, :d])
-      expect(arb.shrink(:c).to_a).to eq [:x, :a, :z]
+      expect(arb.shrink(:c).to_a).to eq [:z, :x, :y]
     end
 
     context "when current value is already the first choice" do

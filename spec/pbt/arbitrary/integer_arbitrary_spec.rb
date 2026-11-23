@@ -32,25 +32,38 @@ RSpec.describe Pbt::Arbitrary::IntegerArbitrary do
       expect(arb.shrink(val)).to be_a(Enumerator)
     end
 
-    it "returns an Enumerator that iterates numbers down to 0 asymptotically" do
+    it "yields binary-search candidates from target up to current - 1 for positive values" do
       arb = Pbt.integer
-      expect(arb.shrink(100).to_a).to eq [50, 25, 13, 7, 4, 2, 1, 0]
+      expect(arb.shrink(100).to_a).to eq [0, 50, 75, 87, 93, 96, 98, 99]
     end
 
-    it "returns an Enumerator that iterates numbers up to 0 asymptotically" do
+    it "yields binary-search candidates from target down to current + 1 for negative values" do
       arb = Pbt.integer
-      expect(arb.shrink(-100).to_a).to eq [-50, -25, -13, -7, -4, -2, -1, 0]
+      expect(arb.shrink(-100).to_a).to eq [0, -50, -75, -87, -93, -96, -98, -99]
+    end
+
+    it "converges to the exact failure threshold under greedy shrinking" do
+      [10, 11, 12, 13, 19].each do |threshold|
+        details = Pbt.check(seed: 1, num_runs: 100) do
+          Pbt.property(Pbt.integer(min: 1, max: 50)) do |n|
+            raise "threshold" if n >= threshold
+          end
+        end
+
+        expect(details.failed).to be(true)
+        expect(details.counterexample).to eq(threshold)
+      end
     end
 
     describe "target" do
-      it "returns an Enumerator that iterates numbers up to target asymptotically" do
+      it "yields binary-search candidates toward a higher target" do
         arb = Pbt.integer
-        expect(arb.shrink(100, target: 200).to_a).to eq [150, 175, 187, 193, 196, 198, 199, 200]
+        expect(arb.shrink(100, target: 200).to_a).to eq [200, 150, 125, 113, 107, 104, 102, 101]
       end
 
-      it "returns an Enumerator that iterates numbers down to target asymptotically" do
+      it "yields binary-search candidates toward a lower target" do
         arb = Pbt.integer
-        expect(arb.shrink(-100, target: -200).to_a).to eq [-150, -175, -187, -193, -196, -198, -199, -200]
+        expect(arb.shrink(-100, target: -200).to_a).to eq [-200, -150, -125, -113, -107, -104, -102, -101]
       end
 
       context "when current value and target is same" do
