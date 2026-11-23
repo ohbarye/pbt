@@ -1,361 +1,357 @@
 # frozen_string_literal: true
 
+require "pbt/stateful/errors"
+require "pbt/stateful/types"
+require "pbt/stateful/command"
+require "pbt/stateful/spec"
+require "pbt/stateful/shrinker"
+
 module Pbt
   module Stateful
-    # Property-compatible wrapper for command-based stateful testing.
-    # It provides `generate`, `shrink` and `run`, so existing runners can execute it.
+    # Property-compatible stateful test driver backing `Pbt.stateful { |m| ... }`.
     class Property
-      ARG_AWARE_GENERATION_ATTEMPTS = 5
+      PER_STEP_MAX_ATTEMPTS = 32
+      private_constant :PER_STEP_MAX_ATTEMPTS
 
-      REQUIRED_COMMAND_METHODS = %i[
-        name
-        arguments
-        applicable?
-        next_state
-        run!
-        verify!
-      ].freeze
+      attr_reader :spec, :max_steps, :min_steps, :max_shrink_attempts
 
-      Step = Struct.new(:command, :args) do
-        def inspect
-          "#<Pbt::Stateful::Step command=#{command_label}, args=#{args.inspect}>"
-        end
-
-        private
-
-        def command_label
-          if command.respond_to?(:name)
-            command.name.inspect
-          else
-            command.class.name || command.class.inspect
-          end
-        end
-      end
-
-      # @param model [Object]
-      # @param sut [Proc]
+      # @param spec [Spec]
       # @param max_steps [Integer]
-      def initialize(model:, sut:, max_steps:)
-        validate_model!(model)
-        raise Pbt::InvalidConfiguration, "sut must be callable" unless sut.respond_to?(:call)
-        raise Pbt::InvalidConfiguration, "max_steps must be an Integer" unless max_steps.is_a?(Integer)
-        raise Pbt::InvalidConfiguration, "max_steps must be non-negative" if max_steps.negative?
+      # @param min_steps [Integer]
+      # @param max_shrink_attempts [Integer]
+      def initialize(spec:, max_steps: 20, min_steps: 1, max_shrink_attempts: 1_000)
+        validate_options!(max_steps: max_steps, min_steps: min_steps, max_shrink_attempts: max_shrink_attempts)
 
-        @model = model
-        @sut_factory = sut
+        @spec = spec
         @max_steps = max_steps
+        @min_steps = min_steps
+        @max_shrink_attempts = max_shrink_attempts
+        @shrinker = Shrinker.new(spec)
       end
 
-      # Generate a sequence of commands valid for the current model state.
-      #
-      # @param rng [Random]
-      # @return [Array<Step>]
-      def generate(rng = Random.new)
-        length = rng.rand(0..@max_steps)
-        state = @model.initial_state
-        sequence = []
-
-        length.times do
-          candidates = generate_candidates_for(state, rng, context: "generate")
-          break if candidates.empty?
-
-          command, args = candidates[rng.rand(candidates.length)]
-          sequence << Step.new(command:, args:)
-          state = command.next_state(state, args)
-        end
-
-        sequence
-      end
-
-      # Shrink a sequence by trying shorter prefixes first.
-      #
-      # @param sequence [Array<Hash, Step>]
-      # @return [Enumerator<Array<Hash, Step>>]
-      def shrink(sequence)
-        Enumerator.new do |y|
-          seen = {}
-          state = @model.initial_state
-
-          (sequence.length - 1).downto(0) do |length|
-            yield_shrink_candidate(y, seen, sequence.first(length))
-          end
-
-          sequence.each_with_index do |step, index|
-            command, args = unpack_step(step)
-            validate_command_protocol!(command, state:, context: "shrink step #{index}")
-            break unless applicable?(command, state, args, context: "shrink step #{index}")
-
-            arbitrary_for(command, state, context: "shrink step #{index}").shrink(args).each do |shrunk_args|
-              candidate = replace_step(sequence, index, command:, args: shrunk_args)
-              next unless valid_sequence?(candidate)
-
-              yield_shrink_candidate(y, seen, candidate)
-            end
-
-            state = command.next_state(state, args)
-          end
-        end
-      end
-
-      # @return [Boolean]
       def stateful?
         true
       end
 
-      # Stateful properties currently require sequential execution because the model,
-      # commands and SUT factory are ordinary Ruby objects and are not guaranteed to be
-      # Ractor-shareable.
+      # Generate a pure immutable `Pbt::Stateful::Run` (compatible with `Pbt.statistics`).
       #
-      # @param _sequence [Array<Hash, Step>]
-      # @raise [Pbt::InvalidConfiguration]
-      def run_in_ractor(_sequence)
-        raise Pbt::InvalidConfiguration, "Pbt.stateful does not support worker: :ractor yet; use worker: :none"
+      # @param rng [Random]
+      # @return [Run]
+      def generate(rng = Random.new)
+        generate_for_check(rng).value
       end
 
-      # Run the command sequence against a fresh SUT and verify each step.
+      # Generate a `RunSample` carrying contextual shrink provenance for `Pbt.check` / `Pbt.assert`.
       #
-      # @param sequence [Array<Hash, Step>]
-      # @return [void]
-      def run(sequence)
-        state = @model.initial_state
-        sut = @sut_factory.call
+      # @param rng [Random]
+      # @return [RunSample]
+      def generate_for_check(rng = Random.new)
+        target_length = (@min_steps == @max_steps) ? @min_steps : rng.rand(@min_steps..@max_steps)
+        initial_state, initial_state_sample, initial_eligible = draw_initial_state(rng, target_length)
 
-        sequence.each_with_index do |step, index|
-          command, args = unpack_step(step)
-          validate_command_protocol!(command, state:, context: "run step #{index}")
+        state = initial_state
+        steps = []
+        step_samples = {}
+        next_id = 0
 
-          unless applicable?(command, state, args, context: "run step #{index}")
-            raise "invalid stateful sequence at step #{index}: #{command_name(command)}"
+        target_length.times do |step_index|
+          eligible = (step_index == 0) ? initial_eligible : eligible_commands(state)
+          break if eligible.empty?
+
+          selected = select_step(eligible, state, step_index, next_id, rng)
+          if selected.nil?
+            break unless steps.empty?
+
+            raise GenerationError,
+              "all eligible commands produced empty argument domains at step #{step_index} " \
+              "(eligible: #{eligible.map(&:name).inspect})"
           end
 
-          before_state = state
-
-          begin
-            after_state = command.next_state(before_state, args)
-            result = command.run!(sut, args)
-            command.verify!(
-              before_state:,
-              after_state:,
-              args:,
-              result:,
-              sut:
-            )
-          rescue *Check::FATAL_EXCEPTIONS
-            raise
-          rescue Exception => e # standard:disable Lint/RescueException:
-            raise e.class,
-              "stateful step #{index} (#{command_name(command)}): #{e.message} [args=#{args.inspect}]",
-              e.backtrace
-          end
-
-          state = after_state
+          step, sample, next_state = selected
+          next_id += 1
+          steps << step
+          step_samples[step.id] = sample
+          state = next_state
         end
+
+        run = Run.new(initial_state: initial_state, steps: steps.freeze)
+        RunSample.new(
+          run,
+          initial_state_sample: initial_state_sample,
+          step_samples: step_samples,
+          session: ShrinkSession.new(max_attempts: @max_shrink_attempts)
+        )
+      end
+
+      # Execute a `Run` against a fresh SUT with full lifecycle, verification, and invariants.
+      #
+      # @param run [Run]
+      # @return [void]
+      def run(run)
+        sym_state = Resolver.deep_freeze(Resolver.deep_dup(run.initial_state))
+        env = {}
+        sut_initial = Resolver.resolve(sym_state, env, detach: true)
+
+        @spec.with_sut(sut_initial) do |sut|
+          inv_initial = Resolver.resolve(sym_state, env)
+          check_invariants!(inv_initial, sut, step_index: nil, step: nil)
+
+          run.steps.each_with_index do |step, index|
+            command = @spec.command_by_name(step.command)
+            concrete_args = Resolver.resolve(step.args, env, detach: true)
+
+            result = execute_stage(stage: :run, target: command.name, step_index: index, step: step) do
+              command.run!(sut, concrete_args)
+            end
+
+            after_sym = command.next_state(sym_state, step.args, Ref.new(step_id: step.id))
+            env[step.id] = result
+
+            before_concrete = Resolver.resolve(sym_state, env)
+            after_concrete = Resolver.resolve(after_sym, env)
+            verify_args = Resolver.resolve(step.args, env)
+
+            context = Context.new(
+              step: step,
+              before: before_concrete,
+              after: after_concrete,
+              args: verify_args,
+              result: result,
+              sut: sut
+            )
+
+            execute_stage(stage: :verify, target: command.name, step_index: index, step: step) do
+              command.verify!(context)
+            end
+
+            check_invariants!(after_concrete, sut, step_index: index, step: step)
+            sym_state = after_sym
+          end
+        end
+      end
+
+      # Deterministically replay a `Pbt::Stateful::Run` (e.g. `details.counterexample`).
+      #
+      # @param run [Run]
+      # @return [void]
+      def replay(run)
+        unless run.is_a?(Run)
+          raise ArgumentError, "replay expects a Pbt::Stateful::Run, got #{run.class}"
+        end
+
+        validate_replay_run!(run)
+        self.run(run)
+      end
+
+      # Determine whether a shrink candidate failure matches the original failure signature.
+      # A shrink candidate that introduces a teardown error is always accepted so that `shrink_case`
+      # immediately halts shrinking and surfaces the cleanup breakage instead of masking it.
+      #
+      # @param initial_err [Exception]
+      # @param candidate_err [Exception]
+      # @return [Boolean]
+      def same_failure?(initial_err, candidate_err)
+        return false unless initial_err.is_a?(StepFailure) && candidate_err.is_a?(StepFailure)
+        return false if initial_err.teardown_error
+        return true if candidate_err.teardown_error
+
+        initial_err.signature == candidate_err.signature
+      end
+
+      # Shrink a failing runner `Case` while preserving provenance and shared shrink session.
+      #
+      # @param test_case [Pbt::Check::Case]
+      # @return [Enumerator<RunSample>]
+      def shrink_case(test_case)
+        return [].each if test_case.exception.is_a?(StepFailure) && test_case.exception.teardown_error
+
+        run_sample =
+          if test_case.sample.is_a?(RunSample)
+            test_case.sample
+          else
+            RunSample.new(
+              test_case.val,
+              initial_state_sample: nil,
+              step_samples: {},
+              session: ShrinkSession.new(max_attempts: @max_shrink_attempts)
+            )
+          end
+
+        @shrinker.shrink(run_sample, failure: test_case.exception)
+      end
+
+      # Plain-value shrink fallback yielding `Run` objects.
+      #
+      # @param run [Run]
+      # @return [Enumerator<Run>]
+      def shrink(run)
+        run_sample = RunSample.new(
+          run,
+          initial_state_sample: nil,
+          step_samples: {},
+          session: ShrinkSession.new(max_attempts: @max_shrink_attempts)
+        )
+        Enumerator.new do |y|
+          @shrinker.shrink(run_sample, failure: nil).each do |sample|
+            y << sample.value
+          end
+        end
+      end
+
+      def run_in_ractor(_run)
+        raise Pbt::InvalidConfiguration, "Pbt.stateful does not support worker: :ractor. Use worker: :none instead."
       end
 
       private
 
-      # @param step [Hash, Step]
-      # @return [Array<Object, Object>]
-      def unpack_step(step)
-        case step
-        in Step(command:, args:)
-          [command, args]
-        in {command:, args:}
-          [command, args]
-        else
-          raise ArgumentError, "invalid stateful step: #{step.inspect}"
+      def validate_options!(max_steps:, min_steps:, max_shrink_attempts:)
+        unless min_steps.is_a?(Integer) && min_steps >= 0
+          raise InvalidSpec, "min_steps must be a non-negative Integer, got #{min_steps.inspect}"
+        end
+        unless max_steps.is_a?(Integer) && max_steps.positive? && max_steps >= min_steps
+          raise InvalidSpec, "max_steps must be a positive Integer >= min_steps (#{min_steps}), got #{max_steps.inspect}"
+        end
+        unless max_shrink_attempts.is_a?(Integer) && max_shrink_attempts >= 0
+          raise InvalidSpec, "max_shrink_attempts must be a non-negative Integer, got #{max_shrink_attempts.inspect}"
         end
       end
 
-      # @param command [Object]
-      # @return [String]
-      def command_name(command)
-        command.respond_to?(:name) ? command.name.to_s : (command.class.name || command.class.inspect)
-      end
+      def draw_initial_state(rng, target_length)
+        initial_state, initial_state_sample = @spec.sample_initial_state(rng)
+        initial_eligible = eligible_commands(initial_state)
 
-      # @param model [Object]
-      # @return [void]
-      def validate_model!(model)
-        missing_methods = %i[initial_state commands].reject { |method_name| model.respond_to?(method_name) }
-        return if missing_methods.empty?
-
-        raise Pbt::InvalidConfiguration,
-          "Pbt.stateful model must respond to #{missing_methods.join(", ")}"
-      end
-
-      # @param state [Object]
-      # @param context [String]
-      # @return [Array<Object>]
-      def commands_for(state, context:)
-        commands = @model.commands(state)
-
-        unless commands.is_a?(Array)
-          raise Pbt::InvalidConfiguration,
-            "Pbt.stateful model.commands(state) must return Array, got #{commands.class} (context=#{context})"
+        unless @spec.arbitrary_initial_state?
+          if initial_eligible.empty?
+            raise InvalidSpec,
+              "no command guard is truthy at initial_state #{Resolver.format_value(initial_state)}"
+          end
+          return [initial_state, initial_state_sample, initial_eligible]
         end
 
-        commands.each { |command| validate_command_protocol!(command, state:, context:) }
-        commands
-      end
+        return [initial_state, initial_state_sample, initial_eligible] unless initial_eligible.empty?
 
-      # @param command [Object]
-      # @param state [Object]
-      # @param context [String]
-      # @return [void]
-      def validate_command_protocol!(command, state:, context:)
-        missing_methods = REQUIRED_COMMAND_METHODS.reject { |method_name| command.respond_to?(method_name) }
-        unless missing_methods.empty?
-          raise Pbt::InvalidConfiguration,
-            "Pbt.stateful command protocol mismatch for #{command.class} " \
-            "(name=#{safe_command_label(command)}, missing: #{missing_methods.join(", ")}, context=#{context})"
+        if target_length.zero?
+          probe_rng = rng.dup
+          PER_STEP_MAX_ATTEMPTS.times do
+            probed_state, = @spec.sample_initial_state(probe_rng)
+            return [initial_state, initial_state_sample, initial_eligible] unless eligible_commands(probed_state).empty?
+          end
+          raise GenerationError,
+            "no command guard was truthy across #{PER_STEP_MAX_ATTEMPTS} initial_state samples"
         end
+
+        (PER_STEP_MAX_ATTEMPTS - 1).times do
+          initial_state, initial_state_sample = @spec.sample_initial_state(rng)
+          initial_eligible = eligible_commands(initial_state)
+          return [initial_state, initial_state_sample, initial_eligible] unless initial_eligible.empty?
+        end
+
+        raise GenerationError,
+          "no command guard was truthy across #{PER_STEP_MAX_ATTEMPTS} initial_state samples"
       end
 
-      # @param command [Object]
-      # @param arguments [Object]
-      # @param context [String]
-      # @return [void]
-      def validate_arguments_protocol!(command, arguments, context:)
-        missing_methods = %i[generate shrink].reject { |method_name| arguments.respond_to?(method_name) }
-        return if missing_methods.empty?
-
-        raise Pbt::InvalidConfiguration,
-          "Pbt.stateful command arguments protocol mismatch for #{command.class} " \
-          "(name=#{safe_command_label(command)}, missing: #{missing_methods.join(", ")}, context=#{context})"
-      end
-
-      # @param command [Object]
-      # @return [String]
-      def safe_command_label(command)
-        command.respond_to?(:name) ? command.name.inspect : "<unknown>"
-      end
-
-      # @param state [Object]
-      # @param rng [Random]
-      # @param context [String]
-      # @return [Array<Array<Object, Object>>]
-      def generate_candidates_for(state, rng, context:)
-        commands_for(state, context:).filter_map do |command|
-          args = generate_applicable_args(command, state, rng, context:)
-          next if args.equal?(NoApplicableArgs)
-
-          [command, args]
+      def validate_replay_run!(run)
+        available_ids = Set.new
+        run.steps.each_with_index do |step, index|
+          @spec.command_by_name(step.command)
+          ref_ids = Resolver.collect_ref_ids(step.args)
+          unbound = ref_ids.reject { |id| available_ids.include?(id) }
+          unless unbound.empty?
+            refs_str = unbound.map { |id| "v#{id}" }.join(", ")
+            raise InvalidSpec,
+              "cannot replay run: unbound Ref #{refs_str} in step #{index + 1} #{step.format}"
+          end
+          available_ids << step.id
         end
       end
 
-      # @param command [Object]
-      # @param state [Object]
-      # @param rng [Random]
-      # @param context [String]
-      # @return [Object]
-      def generate_applicable_args(command, state, rng, context:)
-        arbitrary = arbitrary_for(command, state, context:)
+      def eligible_commands(state)
+        @spec.commands.select { |cmd| cmd.guard?(state) }
+      end
 
-        ARG_AWARE_GENERATION_ATTEMPTS.times do
-          args = generate_args_for(command, arbitrary, rng)
-          return NoApplicableArgs if args.equal?(NoApplicableArgs)
+      # Returns `[step, sample, next_state]`, or `nil` if all eligible commands had empty domains.
+      # Raises `GenerationError` if eligible commands had non-empty domains but preconditions never passed.
+      def select_step(eligible, state, step_index, step_id, rng)
+        candidates = eligible.dup
+        attempts = 0
 
-          return args if applicable?(command, state, args, context:)
+        while attempts < PER_STEP_MAX_ATTEMPTS && !candidates.empty?
+          attempts += 1
+          command = pick_weighted(candidates, rng)
+
+          arb =
+            begin
+              command.arguments_for(state)
+            rescue Pbt::Arbitrary::EmptyDomainError
+              candidates.delete(command)
+              next
+            end
+
+          sample =
+            begin
+              Pbt::Arbitrary::Sample.capture(arb, rng)
+            rescue Pbt::Arbitrary::EmptyDomainError
+              candidates.delete(command)
+              next
+            end
+
+          frozen_args = Resolver.deep_freeze(Resolver.deep_dup(sample.value))
+          if command.precondition?(state, frozen_args)
+            ref = Ref.new(step_id: step_id)
+            next_state = command.next_state(state, frozen_args, ref)
+            step = Step.new(id: step_id, command: command.name, args: frozen_args)
+            return [step, sample, next_state]
+          end
         end
 
-        NoApplicableArgs
-      rescue Pbt::Arbitrary::EmptyDomainError
-        NoApplicableArgs
+        return nil if candidates.empty?
+
+        raise GenerationError,
+          "could not satisfy preconditions at step #{step_index} after #{PER_STEP_MAX_ATTEMPTS} attempts " \
+          "(eligible: #{eligible.map(&:name).inspect})"
       end
 
-      # @param command [Object]
-      # @param state [Object]
-      # @param context [String]
-      # @return [Object]
-      def arguments_for(command, state, context:)
-        command.arguments(state)
+      def pick_weighted(commands, rng)
+        return commands.first if commands.size == 1
+
+        total = commands.sum(&:weight)
+        ticket = rng.rand(total)
+        cumulative = 0
+        commands.each do |cmd|
+          cumulative += cmd.weight
+          return cmd if ticket < cumulative
+        end
+        commands.last
       end
 
-      # @param command [Object]
-      # @param state [Object]
-      # @param context [String]
-      # @return [Object]
-      def arbitrary_for(command, state, context:)
-        arguments = arguments_for(command, state, context:)
-        validate_arguments_protocol!(command, arguments, context:)
-        arguments
-      end
-
-      # @param command [Object]
-      # @param arbitrary [Object]
-      # @param rng [Random]
-      # @return [Object]
-      def generate_args_for(command, arbitrary, rng)
-        arbitrary.generate(rng)
-      rescue Pbt::Arbitrary::EmptyDomainError
-        NoApplicableArgs
-      end
-
-      # @param command [Object]
-      # @param state [Object]
-      # @param args [Object]
-      # @param context [String]
-      # @return [Boolean]
-      def applicable?(command, state, args, context:)
-        command.applicable?(state, args)
-      end
-
-      # @param sequence [Array<Hash, Step>]
-      # @param index [Integer]
-      # @param command [Object]
-      # @param args [Object]
-      # @return [Array<Hash, Step>]
-      def replace_step(sequence, index, command:, args:)
-        candidate = sequence.dup
-        candidate[index] = rebuild_step(sequence[index], command:, args:)
-        candidate
-      end
-
-      # @param step [Hash, Step]
-      # @param command [Object]
-      # @param args [Object]
-      # @return [Hash, Step]
-      def rebuild_step(step, command:, args:)
-        case step
-        in Step
-          Step.new(command:, args:)
-        in Hash
-          {command:, args:}
-        else
-          raise ArgumentError, "invalid stateful step: #{step.inspect}"
+      def check_invariants!(state, sut, step_index:, step:)
+        @spec.invariants.each_with_index do |inv, idx|
+          target = inv.name || :"invariant_#{idx}"
+          label = inv.name ? "invariant #{inv.name.inspect}" : "invariant"
+          execute_stage(stage: :invariant, target: target, target_label: label, step_index: step_index, step: step) do
+            Resolver.invoke_with_arity(inv.block, state, sut)
+          end
         end
       end
 
-      # @param sequence [Array<Hash, Step>]
-      # @return [Boolean]
-      def valid_sequence?(sequence)
-        state = @model.initial_state
-
-        sequence.each do |step|
-          command, args = unpack_step(step)
-          return false unless applicable?(command, state, args, context: "validate sequence")
-
-          state = command.next_state(state, args)
-        end
-
-        true
-      rescue
-        false
+      def execute_stage(stage:, target:, step_index:, step:, target_label: nil)
+        yield
+      rescue *Check::FATAL_EXCEPTIONS, InvalidSpec, ModelError, PreconditionNotMet
+        raise
+      rescue Exception => e # standard:disable Lint/RescueException
+        step_label = step_index ? "step #{step_index + 1} #{step.format}" : "initial"
+        label = target_label || stage.to_s
+        failure = StepFailure.new(
+          "#{step_label} [#{label}]: #{e.message}",
+          step_index: step_index,
+          step: step,
+          stage: stage,
+          target: target,
+          exception_class: e.class
+        )
+        failure.set_backtrace(e.backtrace) if e.backtrace
+        raise failure
       end
-
-      # @param y [Enumerator::Yielder]
-      # @param seen [Hash{Array<Hash, Step> => true}]
-      # @param candidate [Array<Hash, Step>]
-      # @return [void]
-      def yield_shrink_candidate(y, seen, candidate)
-        return if seen[candidate]
-
-        seen[candidate] = true
-        y << candidate
-      end
-
-      NoApplicableArgs = Object.new
-      private_constant :NoApplicableArgs
     end
   end
 end

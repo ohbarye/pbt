@@ -77,21 +77,15 @@ RSpec.describe Pbt::Check::RunnerMethods do
     end
 
     it "re-raises fatal exceptions in Pbt.stateful without rewrapping" do
-      cmd = Class.new do
-        def name = :interrupt
-        def arguments(_state) = Pbt.nil
-        def applicable?(_state, _args) = true
-        def next_state(state, _args) = state
-        def run!(_sut, _args) = raise(Interrupt, "ctrl-c")
-        def verify!(**) = nil
-      end.new
-      model = Object.new
-      model.define_singleton_method(:initial_state) { 0 }
-      model.define_singleton_method(:commands) { |_state| [cmd] }
-
       expect {
         Pbt.check(num_runs: 10, seed: 1, worker: :none) do
-          Pbt.stateful(model: model, sut: -> { Object.new }, max_steps: 3)
+          Pbt.stateful(max_steps: 3) do |m|
+            m.initial_state 0
+            m.sut { Object.new }
+            m.command(:interrupt) do |c|
+              c.run { |_sut, _args| raise(Interrupt, "ctrl-c") }
+            end
+          end
         end
       }.to raise_error(Interrupt, "ctrl-c")
     end

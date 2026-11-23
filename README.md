@@ -190,8 +190,8 @@ For manual shrinking, retain a sample: `sample = arb.sample(Random.new(42))`,
 then inspect `sample.value` and `sample.shrink.map(&:value)`. Calling
 `arb.shrink(value)` directly on `Pbt.frequency`, `Pbt.one_of`, or `Arbitrary#map`
 without an `unmapper` returns no candidates because a bare value cannot identify its
-source branch or preimage. The current `Pbt.stateful` command arguments use the
-plain-value protocol, so those contextual generators do not shrink command arguments there.
+source branch or preimage. Both `Pbt.property` and `Pbt.stateful` capture `Sample`
+provenance automatically, so contextual generators shrink seamlessly in both.
 
 ### Generator statistics
 
@@ -216,98 +216,58 @@ Generator and classifier errors propagate to the caller.
 
 ## Stateful Testing
 
-`Pbt` also provides a stateful property API for model-based / command-based testing.
-It is designed as a property-compatible object (`generate`, `shrink`, `run`) so it works with the existing runner (`Pbt.assert` / `Pbt.check`) without changing the runner API.
+`Pbt.stateful` provides a yield-based model DSL for stateful / command-based property testing.
+It works directly with `Pbt.assert`, `Pbt.check`, `Pbt.statistics`, and `property.replay(run)` while preserving lexical `self` (so RSpec `expect(...)`/`let` and Minitest assertions work naturally inside callbacks).
 
-> **Note:** The current `Pbt.stateful(model:, sut:)` protocol is planned to be replaced with a cleaner yield-builder DSL and improved shrinking engine in v0.9.0 before v1.0.0. See [#67](https://github.com/ohbarye/pbt/issues/67) and [docs/plans/stateful-pbt-redesign.md](docs/plans/stateful-pbt-redesign.md).
-
-Commands currently implement `arguments(state)` and `applicable?(state, args)`; the earlier zero-argument / state-only forms are no longer supported.
-
-### Minimal usage
+### Usage
 
 ```ruby
-class CounterModel
-  def initialize
-    @inc = IncrementCommand.new
+BankState = Data.define(:balance, :accounts)
+
+property = Pbt.stateful(min_steps: 1, max_steps: 20) do |m|
+  m.initial_state BankState.new(balance: 0, accounts: [])
+  m.sut { Bank.new }
+  m.teardown { |sut| sut.close } # or use `m.around { |initial_state, run| ... }`
+
+  m.invariant(:non_negative) do |state, sut|
+    raise "negative balance" unless sut.balance == state.balance && state.balance >= 0
   end
 
-  def initial_state
-    0
+  m.command(:deposit, weight: 3) do |c|
+    c.arguments Pbt.integer(min: 1, max: 100)
+    c.next_state { |s, amount| s.with(balance: s.balance + amount) }
+    c.run { |sut, amount| sut.deposit(amount) }
+    c.verify { |ctx| raise "mismatch" unless ctx.result == ctx.after.balance }
   end
 
-  def commands(_state)
-    [@inc]
-  end
-end
-
-class IncrementCommand
-  def name
-    :increment
+  m.command(:create_sub_account) do |c|
+    # `ref` is an opaque symbolic token (`Pbt::Stateful::Ref`) referencing this step's SUT return value.
+    c.next_state { |s, _args, ref| s.with(accounts: [*s.accounts, ref]) }
+    c.run { |sut| sut.create_sub_account }
   end
 
-  def arguments(_state)
-    Pbt.nil
-  end
-
-  def applicable?(_state, _args)
-    true
-  end
-
-  def next_state(state, _args)
-    state + 1
-  end
-
-  def run!(sut, _args)
-    sut.increment
-  end
-
-  def verify!(before_state:, after_state:, args: _, result:, sut:)
-    raise "unexpected result" unless result == after_state
-    raise "state mismatch" unless after_state == before_state + 1
-    raise "sut mismatch" unless sut.value == after_state
+  m.command(:close_sub_account) do |c|
+    c.guard { |s| !s.accounts.empty? }
+    c.arguments { |s| Pbt.constant_from(*s.accounts) }
+    c.next_state { |s, id| s.with(accounts: s.accounts - [id]) }
+    c.run { |sut, id| sut.close_sub_account(id) } # `id` is automatically resolved to the concrete SUT value
   end
 end
 
-class Counter
-  attr_reader :value
-
-  def initialize
-    @value = 0
-  end
-
-  def increment
-    @value += 1
-  end
-end
-
-Pbt.assert do
-  Pbt.stateful(
-    model: CounterModel.new,
-    sut: -> { Counter.new },
-    max_steps: 20
-  )
-end
+Pbt.assert(seed: 42) { property }
 ```
 
-### Expected interfaces
+### Key capabilities
 
-`Pbt.stateful(model:, sut:, max_steps:)` expects the following duck-typed interfaces:
-
-- `model.initial_state`
-- `model.commands(state)` -> `Array<command>`
-- `command.name`
-- `command.arguments(state)` (a `Pbt` arbitrary, may depend on current model state)
-- `command.applicable?(state, args)` -> `true` / `false`
-- `command.next_state(state, args)` -> next model state
-- `command.run!(sut, args)` -> command result
-- `command.verify!(before_state:, after_state:, args:, result:, sut:)`
-
-### Current limitations
-
-- `Pbt.stateful` runs sequentially by default, even if the global worker is `:ractor`.
-- You can still pass `worker: :none` explicitly if you want to make that choice obvious in a test.
-- `worker: :ractor` is currently unsupported and raises `Pbt::InvalidConfiguration`.
-- Shrinking supports shorter prefixes and command-argument shrinking (using `command.arguments(state).shrink(args)`).
+- **Model hooks (`m`)**:
+  - `m.initial_state`: accepts a static value, an `Arbitrary` (shrunk automatically on failure), or a zero-arg factory block. Model states are deep-frozen to catch accidental mutation immediately.
+  - `m.sut { |initial_state| ... }` + optional `m.teardown { |sut| ... }`, or `m.around { |initial_state, run| ... }` (mutually exclusive with `sut`/`teardown`; must call `run.call(sut)` once). Cleanup runs in `ensure` on every trial and shrink candidate.
+  - `m.command(name, weight: 1) { |c| ... }`: defines weighted commands with `c.guard`, `c.arguments` (arbitrary, keyword shorthand `c.arguments(k: arb)`, or state-dependent block `{ |state| arb }`), `c.precondition`, `c.next_state`, `c.run` (required), and `c.verify` (`Context` with `:step`, `:before`, `:after`, `:args`, `:result`, `:sut`).
+  - `m.invariant(name = nil) { |state, sut| ... }`: checked after SUT setup (before step 1) and after every step's `verify`.
+- **Symbolic references (`Pbt::Stateful::Ref`)**: `c.next_state { |s, args, ref| ... }` can store `ref` in the pure model state and select it in later commands' `c.arguments`. During execution, `Ref`s inside `Array`, `Hash`, `Set`, `Struct`, and `Data` are resolved to concrete SUT return values (including `nil`).
+- **Best-first shrinking**: performs post-failure truncation, ddmin chunk deletion, single-step deletion, `initial_state` shrinking, and contextual step argument shrinking (preserving `Pbt.frequency`, `Pbt.one_of`, and block `#map` shrink trees), with offline model validation (`Arbitrary#cover?`, `guard`, `precondition`, `Ref` dependencies), `FailureSignature` equivalence, deduplication, and `max_shrink_attempts` budget.
+- **Replay & statistics**: `details = Pbt.check { property }; property.replay(details.counterexample)` replays the minimized `Pbt::Stateful::Run`; `Pbt.statistics(property) { |run| run.command_names }` inspects generated command distributions.
+- **Worker behavior**: `Pbt.stateful` runs sequentially by default even when `Pbt.configuration.worker = :ractor`. Passing `worker: :ractor` explicitly raises `Pbt::InvalidConfiguration` before generation.
 
 ## What if property-based tests fail?
 

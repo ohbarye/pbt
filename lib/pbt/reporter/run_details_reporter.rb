@@ -43,20 +43,49 @@ module Pbt
 
       # @return [String]
       def format_error_message
+        counterexample_str = format_counterexample
+        error_line = "Got #{@run_details.error_instance.class}: #{@run_details.error_message}"
+        if @run_details.error_instance.is_a?(Pbt::Stateful::StepFailure) && @run_details.error_instance.cause
+          error_line = "#{error_line}\n    (cause: #{@run_details.error_instance.cause.class})"
+        end
+
         <<~MSG.chomp
           Property failed after #{@run_details.num_runs} test(s)
             seed: #{@run_details.seed}
-            counterexample: #{@run_details.counterexample}
+            counterexample:#{counterexample_str}
             Shrunk #{@run_details.num_shrinks} time(s)
-            Got #{@run_details.error_instance.class}: #{@run_details.error_message}
+            #{error_line}
         MSG
       end
 
+      def format_counterexample
+        ce = @run_details.counterexample
+        if ce.is_a?(Pbt::Stateful::Run)
+          err = @run_details.error_instance
+          formatted =
+            if err.is_a?(Pbt::Stateful::StepFailure)
+              ce.format(failed_step_index: err.step_index, failed_stage: err.stage)
+            else
+              ce.format
+            end
+          indented = formatted.lines.map { |line| "    #{line.chomp}" }.join("\n")
+          "\n#{indented}"
+        else
+          " #{ce}"
+        end
+      end
+
       def error_backtrace
-        return "" if @run_details.error_instance.backtrace_locations.nil? # It can be nil.
+        locations =
+          if @run_details.error_instance.is_a?(Pbt::Stateful::StepFailure)
+            @run_details.error_instance.backtrace || @run_details.error_instance.backtrace_locations
+          else
+            @run_details.error_instance.backtrace_locations
+          end
+        return "" if locations.nil? # It can be nil.
 
         i = @run_details.verbose ? -1 : 3
-        "    #{@run_details.error_instance.backtrace_locations[..i].join("\n    ")}"
+        "    #{locations[..i].join("\n    ")}"
       end
 
       # @return [String]
