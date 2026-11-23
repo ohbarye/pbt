@@ -1,0 +1,44 @@
+module Pbt
+  module Reporter
+    class RunDetails < Struct[untyped]
+      attr_accessor failed: bool
+      attr_accessor num_runs: Integer
+      attr_accessor num_skips: Integer
+      attr_accessor num_shrinks: Integer
+      attr_accessor seed: Integer
+      attr_accessor counterexample: untyped
+      attr_accessor counterexample_path: String?
+      attr_accessor error_message: String?
+      attr_accessor error_instance: Exception?
+      attr_accessor failures: Array[Check::Case]
+      attr_accessor verbose: bool
+      attr_accessor execution_summary: Array[RunExecution::ExecutionTreeNode]
+      attr_accessor run_configuration: Hash[Symbol, untyped]
+    end
+
+    class RunExecution
+      class ExecutionTreeNode < Struct[untyped]
+        attr_accessor result: :success | :failure
+        attr_accessor value: untyped
+        attr_accessor children: Array[ExecutionTreeNode]
+      end
+
+      attr_reader num_successes: Integer
+      attr_reader num_skips: Integer
+
+      def initialize: (bool verbose) -> void
+      def record_failure: (Check::Case c) -> void
+      def record_success: (Check::Case c) -> void
+      def record_skip: () -> void
+      def record_too_many_skips: (TooManySkipsError error) -> void
+      def too_many_skips?: () -> bool
+      def success?: () -> bool
+      def to_run_details: (Hash[Symbol, untyped] config) -> RunDetails
+    end
+
+    class RunDetailsReporter
+      def initialize: (RunDetails run_details) -> void
+      def report_run_details: () -> void
+    end
+  end
+end
