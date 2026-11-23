@@ -46,6 +46,41 @@ module Pbt
         arbitrary.respond_to?(:contextual?) && arbitrary.contextual?
       end
 
+      def self.validate_bound_arbitrary!(arb)
+        return arb if arb.is_a?(Arbitrary) || (arb.respond_to?(:generate) && arb.respond_to?(:shrink))
+
+        raise ArgumentError, "bind block must return an arbitrary responding to generate and shrink, got #{arb.class}"
+      end
+
+      def self.bind(outer_sample, inner_seed, &binder)
+        inner_arb = validate_bound_arbitrary!(binder.call(outer_sample.value))
+        inner_sample = capture(inner_arb, Random.new(inner_seed))
+        bind_samples(outer_sample, inner_sample, inner_seed, binder)
+      end
+
+      def self.bind_samples(outer_sample, inner_sample, inner_seed, binder)
+        Sample.new(inner_sample.value) do
+          Enumerator.new do |y|
+            outer_sample.shrink.each do |shrunk_outer|
+              shrunk_inner =
+                begin
+                  shrunk_inner_arb = validate_bound_arbitrary!(binder.call(shrunk_outer.value))
+                  capture(shrunk_inner_arb, Random.new(inner_seed))
+                rescue EmptyDomainError, FilterExhaustedError
+                  next
+                end
+
+              y << bind_samples(shrunk_outer, shrunk_inner, inner_seed, binder)
+            end
+
+            inner_sample.shrink.each do |shrunk_inner|
+              y << bind_samples(outer_sample, shrunk_inner, inner_seed, binder)
+            end
+          end
+        end
+      end
+      private_class_method :bind_samples
+
       def self.tuple(samples)
         Sample.new(samples.map(&:value)) do
           Enumerator.new do |y|

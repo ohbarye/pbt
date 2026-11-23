@@ -38,6 +38,12 @@ mapped_val = Pbt.integer.map { |n| n.to_s }.generate
 # @type var mapped_proc_val: String
 mapped_proc_val = Pbt.integer.map(->(n) { n.to_s }, ->(s) { s.to_i }).generate
 
+# @type var bound_val: Array[Integer]
+bound_val = Pbt.integer(min: 0, max: 10).flat_map { |n| Pbt.array(Pbt.constant(n), min: 1, max: 2) }.generate
+
+# @type var bound_proc_val: String
+bound_proc_val = Pbt.integer(min: 0, max: 5).bind(->(n) { Pbt.constant(n.to_s) }).generate
+
 # @type var filtered_val: Integer
 filtered_val = Pbt.integer.filter(max_attempts: 100) { |n| n.even? }.generate
 
@@ -83,7 +89,7 @@ cov = Pbt.integer.cover?(1)
 
 _ = [
   int_val, nat_val, arr_val, tuple_val, fixed_hash_val, choose_val,
-  mapped_val, mapped_proc_val, filtered_val, freq_val, one_of_val,
+  mapped_val, mapped_proc_val, bound_val, bound_proc_val, filtered_val, freq_val, one_of_val,
   const_from_val, hash_val, pbt_obj_hash, set_val, float_val, nil_val,
   date_val, time_val, sv, ss, cov
 ]

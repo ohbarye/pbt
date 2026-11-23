@@ -45,6 +45,10 @@ module Pbt
       def map: [U] () { (T) -> U } -> MapArbitrary[U]
              | [U] (^(T) -> U mapper, ?(^(untyped) -> untyped | _Callable)? unmapper) -> MapArbitrary[U]
              | (_Callable mapper, ?(^(untyped) -> untyped | _Callable)? unmapper) -> MapArbitrary[untyped]
+      def bind: [U] () { (T) -> _Arbitrary[U] } -> BindArbitrary[U]
+              | [U] (^(T) -> _Arbitrary[U] binder) -> BindArbitrary[U]
+              | (_Callable binder) -> BindArbitrary[untyped]
+      alias flat_map bind
       def filter: (?max_attempts: Integer) { (T) -> boolish } -> FilterArbitrary[T]
     end
 
@@ -87,6 +91,10 @@ module Pbt
 
     class MapArbitrary[out T = untyped] < Arbitrary[T]
       def initialize: (_Arbitrary[untyped] arb, ^(untyped) -> untyped | _Callable mapper, ?(^(untyped) -> untyped | _Callable)? unmapper, ?bijective: bool) -> void
+    end
+
+    class BindArbitrary[out T = untyped] < Arbitrary[T]
+      def initialize: (_Arbitrary[untyped] arb, ^(untyped) -> untyped | _Callable binder) -> void
     end
 
     class FloatArbitrary < MapArbitrary[Float]

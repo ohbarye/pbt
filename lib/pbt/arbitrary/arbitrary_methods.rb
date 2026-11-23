@@ -12,6 +12,7 @@ require "pbt/arbitrary/choose_arbitrary"
 require "pbt/arbitrary/one_of_arbitrary"
 require "pbt/arbitrary/frequency_arbitrary"
 require "pbt/arbitrary/map_arbitrary"
+require "pbt/arbitrary/bind_arbitrary"
 require "pbt/arbitrary/float_arbitrary"
 require "pbt/arbitrary/filter_arbitrary"
 

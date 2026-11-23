@@ -164,8 +164,9 @@ Pbt.constant_from(:a, 1, 0.1).generate                 # => :a or 1 or 0.1
 Pbt.one_of(Pbt.integer, Pbt.constant(nil)).generate    # => 42 or nil
 
 Pbt.integer(min: 0, max: 10).map { |n| n * 2 }.generate # => 8
+Pbt.integer(min: 0, max: 10).flat_map { |lo| Pbt.integer(min: lo, max: 10).map { |hi| [lo, hi] } }.generate # => [3, 7]
 Pbt.integer(min: 0, max: 10).filter(&:even?).generate   # => 4
-````
+```
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.
 
@@ -188,10 +189,11 @@ branch. Generated values and reported counterexamples remain ordinary Ruby value
 
 For manual shrinking, retain a sample: `sample = arb.sample(Random.new(42))`,
 then inspect `sample.value` and `sample.shrink.map(&:value)`. Calling
-`arb.shrink(value)` directly on `Pbt.frequency`, `Pbt.one_of`, or `Arbitrary#map`
-without an `unmapper` returns no candidates because a bare value cannot identify its
-source branch or preimage. Both `Pbt.property` and `Pbt.stateful` capture `Sample`
-provenance automatically, so contextual generators shrink seamlessly in both.
+`arb.shrink(value)` directly on `Pbt.frequency`, `Pbt.one_of`, `Arbitrary#bind` /
+`#flat_map`, or `Arbitrary#map` without an `unmapper` returns no candidates because a
+bare value cannot identify its source branch or preimage. Both `Pbt.property` and
+`Pbt.stateful` capture `Sample` provenance automatically, so contextual generators
+shrink seamlessly in both.
 
 ### Generator statistics
 

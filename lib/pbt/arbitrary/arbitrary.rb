@@ -92,6 +92,29 @@ module Pbt
         MapArbitrary.new(self, resolved_mapper, unmapper)
       end
 
+      # Create another arbitrary by feeding each generated value into `binder` (or a block)
+      # to produce a dependent arbitrary. Shrinking works in `Pbt.property`, `Pbt.stateful`,
+      # and `sample` by shrinking both the outer value and the dependent inner value.
+      #
+      # @example Block form
+      #   Pbt.integer(min: 0, max: 100).flat_map { |min| Pbt.integer(min: min, max: 100).map { |max| [min, max] } }
+      #
+      # @param binder [#call, nil] Callable returning an arbitrary for each generated value.
+      # @return [BindArbitrary] New dependent arbitrary.
+      def bind(binder = nil, &block)
+        if binder && block
+          raise ArgumentError, "bind accepts either a binder argument or a block, not both"
+        end
+
+        resolved_binder = binder || block
+        unless resolved_binder.respond_to?(:call)
+          raise ArgumentError, "bind requires a callable binder or a block"
+        end
+
+        BindArbitrary.new(self, resolved_binder)
+      end
+      alias_method :flat_map, :bind
+
       # Create another arbitrary by filtering values against `refinement`.
       # All the values produced by the resulting arbitrary satisfy `!!refinement(value) == true`.
       #

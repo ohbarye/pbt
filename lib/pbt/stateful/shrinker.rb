@@ -64,6 +64,7 @@ module Pbt
         run = run_sample.run
         session = run_sample.session
         session.mark_seen(run)
+        original_states = before_states_by_step_id(run)
 
         Enumerator.new do |y|
           next if session.exhausted?
@@ -86,24 +87,25 @@ module Pbt
           end
 
           # Stage 2: Chunk deletions (ddmin-style, back to front).
-          next if shrink_by_chunk_deletions(y, run_sample, session) == :exhausted
+          next if shrink_by_chunk_deletions(y, run_sample, session, original_states) == :exhausted
 
           # Stage 3: Single-step deletions (back to front).
-          next if shrink_by_single_deletions(y, run_sample, session) == :exhausted
+          next if shrink_by_single_deletions(y, run_sample, session, original_states) == :exhausted
 
           # Stage 4: Initial state shrinking (when initial_state is an Arbitrary).
-          next if shrink_initial_state(y, run_sample, session) == :exhausted
+          next if shrink_initial_state(y, run_sample, session, original_states) == :exhausted
 
           # Stage 5: Step argument shrinking (step 0..n-1).
-          shrink_step_arguments(y, run_sample, session)
+          shrink_step_arguments(y, run_sample, session, original_states)
         end
       end
 
       # Validate a candidate run purely against the model without touching the SUT.
       #
       # @param run [Run]
+      # @param original_states [Hash<Integer, Object>, nil]
       # @return [Boolean]
-      def valid_run?(run)
+      def valid_run?(run, original_states: nil)
         state = Resolver.deep_freeze(run.initial_state)
         available_ids = Set.new
 
@@ -121,7 +123,12 @@ module Pbt
               return false
             end
 
-          return false if Pbt::Arbitrary::Arbitrary.cover_result(arb, step.args) == false
+          covered = Pbt::Arbitrary::Arbitrary.cover_result(arb, step.args)
+          return false if covered == false
+          if covered.nil? && command.state_dependent_arguments? &&
+              original_states&.key?(step.id) && original_states[step.id] != state
+            return false
+          end
           return false unless command.precondition?(state, step.args)
 
           state = command.next_state(state, step.args, Ref.new(step_id: step.id))
@@ -133,6 +140,17 @@ module Pbt
 
       private
 
+      def before_states_by_step_id(run)
+        states = {}
+        state = Resolver.deep_freeze(run.initial_state)
+        run.steps.each do |step|
+          states[step.id] = state
+          command = @spec.command_by_name(step.command)
+          state = command.next_state(state, step.args, Ref.new(step_id: step.id))
+        end
+        states
+      end
+
       def post_failure_truncation(steps, failure)
         if failure.step_index.is_a?(Integer) && failure.step_index < steps.length - 1
           steps[0..failure.step_index]
@@ -141,7 +159,7 @@ module Pbt
         end
       end
 
-      def shrink_by_chunk_deletions(y, run_sample, session)
+      def shrink_by_chunk_deletions(y, run_sample, session, original_states)
         run = run_sample.run
         steps = run.steps
         n = steps.length
@@ -156,7 +174,8 @@ module Pbt
               candidate,
               session: session,
               initial_state_sample: run_sample.initial_state_sample,
-              step_samples: run_sample.step_samples
+              step_samples: run_sample.step_samples,
+              original_states: original_states
             )
             return :exhausted if status == :exhausted
           end
@@ -177,7 +196,7 @@ module Pbt
         starts
       end
 
-      def shrink_by_single_deletions(y, run_sample, session)
+      def shrink_by_single_deletions(y, run_sample, session, original_states)
         run = run_sample.run
         steps = run.steps
         (steps.length - 1).downto(0) do |idx|
@@ -188,7 +207,8 @@ module Pbt
             candidate,
             session: session,
             initial_state_sample: run_sample.initial_state_sample,
-            step_samples: run_sample.step_samples
+            step_samples: run_sample.step_samples,
+            original_states: original_states
           )
           return :exhausted if status == :exhausted
         end
@@ -196,7 +216,7 @@ module Pbt
         :ok
       end
 
-      def shrink_initial_state(y, run_sample, session)
+      def shrink_initial_state(y, run_sample, session, original_states)
         initial_sample = run_sample.initial_state_sample
         return :ok unless initial_sample
 
@@ -209,7 +229,8 @@ module Pbt
             candidate,
             session: session,
             initial_state_sample: child_sample,
-            step_samples: run_sample.step_samples
+            step_samples: run_sample.step_samples,
+            original_states: original_states
           )
           return :exhausted if status == :exhausted
         end
@@ -217,7 +238,7 @@ module Pbt
         :ok
       end
 
-      def shrink_step_arguments(y, run_sample, session)
+      def shrink_step_arguments(y, run_sample, session, original_states)
         run = run_sample.run
         steps = run.steps
         step_samples = run_sample.step_samples
@@ -239,7 +260,8 @@ module Pbt
                 candidate,
                 session: session,
                 initial_state_sample: run_sample.initial_state_sample,
-                step_samples: step_samples.merge(step.id => child_sample)
+                step_samples: step_samples.merge(step.id => child_sample),
+                original_states: original_states
               )
               return :exhausted if status == :exhausted
             end
@@ -261,7 +283,8 @@ module Pbt
                 candidate,
                 session: session,
                 initial_state_sample: run_sample.initial_state_sample,
-                step_samples: step_samples
+                step_samples: step_samples,
+                original_states: original_states
               )
               return :exhausted if status == :exhausted
             end
@@ -273,14 +296,14 @@ module Pbt
         :ok
       end
 
-      def emit_candidate(y, candidate, session:, initial_state_sample:, step_samples:, validate: true)
+      def emit_candidate(y, candidate, session:, initial_state_sample:, step_samples:, validate: true, original_states: nil)
         return :exhausted if session.exhausted?
         return :duplicate if session.seen?(candidate)
 
         session.mark_seen(candidate)
         session.consume_attempt!
 
-        return :invalid if validate && !valid_run?(candidate)
+        return :invalid if validate && !valid_run?(candidate, original_states: original_states)
 
         y << RunSample.new(
           candidate,
