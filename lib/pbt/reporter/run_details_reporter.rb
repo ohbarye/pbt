@@ -71,8 +71,12 @@ module Pbt
           indented = formatted.lines.map { |line| "    #{line.chomp}" }.join("\n")
           "\n#{indented}"
         else
-          " #{ce}"
+          " #{format_value(ce)}"
         end
+      end
+
+      def format_value(value)
+        value.is_a?(Pbt::Stateful::Run) ? value.to_s : value.inspect
       end
 
       def error_backtrace
@@ -92,7 +96,7 @@ module Pbt
       def verbose_details
         [
           "\nEncountered failures were:",
-          @run_details.failures.map { |f| "- #{f.val}" },
+          @run_details.failures.map { |f| "- #{format_value(f.val)}" },
           format_execution_summary
         ].join("\n")
       end
@@ -119,7 +123,7 @@ module Pbt
             "\x1b[31m\u00D7\x1b[0m" # red "×"
           end
           left_padding = ". " * current_depth
-          summary_lines << "#{left_padding}#{result_icon} #{current_tree.value}"
+          summary_lines << "#{left_padding}#{result_icon} #{format_value(current_tree.value)}"
 
           # push its children to the queue
           current_tree.children.reverse_each do |tree|

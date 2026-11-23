@@ -29,8 +29,11 @@ tuple_val = Pbt.tuple(Pbt.integer, Pbt.symbol).generate
 # @type var fixed_hash_val: Hash[untyped, untyped]
 fixed_hash_val = Pbt.fixed_hash(x: Pbt.integer, y: Pbt.boolean).generate
 
-# @type var choose_val: Integer | Float
+# @type var choose_val: Integer
 choose_val = Pbt.choose(1..5).generate
+
+# @type var choose_float_val: Float
+choose_float_val = Pbt.choose(0.0..1.0).generate
 
 # @type var mapped_val: String
 mapped_val = Pbt.integer.map { |n| n.to_s }.generate
@@ -74,6 +77,9 @@ float_int_bounds_val = Pbt.float(min: 0, max: 10).generate
 # @type var str_val: String
 str_val = Pbt.string(min: 0, max: 5).generate
 
+# @type var printable_val: String
+printable_val = Pbt.printable_char.generate
+
 # @type var nil_val: nil
 nil_val = Pbt.nil.generate
 
@@ -94,9 +100,9 @@ ss = sample.shrink
 cov = Pbt.integer.cover?(1)
 
 _ = [
-  int_val, nat_val, arr_val, tuple_val, fixed_hash_val, choose_val,
+  int_val, nat_val, arr_val, tuple_val, fixed_hash_val, choose_val, choose_float_val,
   mapped_val, mapped_proc_val, bound_val, bound_proc_val, filtered_val, freq_val, one_of_val,
-  const_from_val, hash_val, pbt_obj_hash, set_val, float_val, float_int_bounds_val, str_val, nil_val,
+  const_from_val, hash_val, pbt_obj_hash, set_val, float_val, float_int_bounds_val, str_val, printable_val, nil_val,
   date_val, time_val, sv, ss, cov
 ]
 

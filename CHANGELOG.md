@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+- Pre-v1.0.0 correctness, validation, and API polish:
+  - Fix character/Unicode generators: fix `DEL` (`"\x7F"`) in `ASCII_CHARS`, exclude UTF-16 surrogates from `Pbt.char` so generated strings are always valid UTF-8, and replace the broken `String#succ` `PRINTABLE_CHARS` expansion with codepoint-range generation in `Pbt.printable_char` / `Pbt.printable_string` covering printable ASCII, BMP (including CJK), and supplementary planes (including emoji).
+  - Validate runner options (`num_runs`, `worker`, `seed`, `max_skips`, unknown keys) upfront with `Pbt::InvalidConfiguration`, and validate `Pbt.property` / `Pbt.check` block and arbitrary arguments eagerly with `ArgumentError`.
+  - Format reported counterexamples, verbose failures, and execution summaries with `#inspect` (preserving multiline `Pbt::Stateful::Run` formatting) so `""`, `nil`, and `"1"` vs `1` are unambiguous.
+  - Prevent non-terminating shrinking on non-injective `MapArbitrary#shrink` and pathological custom bare shrinkers via non-progress filtering, seen-value tracking, and a shrink-step safety cap in `RunnerIterator`.
+  - Preserve earlier property failures over later batch generation errors under `worker: :ractor`.
+  - Clean up public API leaks (`Pbt.toss` and internal mapper constants are now private, `Pbt.frequency` raises `EmptyDomainError` on empty domains, `ChooseArbitrary[T]` is generic in RBS, and `pbt.gemspec` metadata is updated).
 - Add seed-reproducible edge-case / boundary-value bias to built-in numeric and ranged arbitraries (`IntegerArbitrary`, `FloatArbitrary`, `ChooseArbitrary`, and large `ArrayArbitrary`/`Pbt.string` lengths) to surface common boundary cases (`0`, `min`, `max`, `0.0`, `-0.0`, empty/max lengths) much more frequently ([#83](https://github.com/ohbarye/pbt/issues/83)). Note: because PRNG draw sequences and shrink order changed, seeds from v0.9.0 will generate different values and counterexamples.
 - Add `Pbt.string` (printable ASCII default), rewrite `FloatArbitrary` as a direct `Arbitrary` subclass with `min:`, `max:`, `allow_nan:`, and `allow_infinity:` plus float-aware binary-search shrinking (removing unused `FLOAT_MAPPER`/`FLOAT_UNMAPPER`), and fix `ChooseArbitrary` generation/shrinking for `Float` and exclusive ranges ([#85](https://github.com/ohbarye/pbt/issues/85)).
 - Add `Arbitrary#bind` / `#flat_map` (`BindArbitrary`) for dependent value generation with integrated `Sample` shrinking ([#84](https://github.com/ohbarye/pbt/issues/84)).

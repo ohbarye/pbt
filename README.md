@@ -163,6 +163,7 @@ Pbt.tuple(Pbt.symbol, Pbt.integer).generate            # => [:atq, 42]
 
 Pbt.fixed_hash(x: Pbt.symbol, y: Pbt.integer).generate # => {x: :atq, y: 42}
 Pbt.hash(Pbt.symbol, Pbt.integer).generate             # => {atq: 121, ygab: -1142}
+Pbt.set(Pbt.integer).generate                          # => #<Set: {1, 42}>
 
 Pbt.constant_from(:a, 1, 0.1).generate                 # => :a or 1 or 0.1
 Pbt.one_of(Pbt.integer, Pbt.constant(nil)).generate    # => 42 or nil
@@ -171,6 +172,8 @@ Pbt.integer(min: 0, max: 10).map { |n| n * 2 }.generate # => 8
 Pbt.integer(min: 0, max: 10).flat_map { |lo| Pbt.integer(min: lo, max: 10).map { |hi| [lo, hi] } }.generate # => [3, 7]
 Pbt.integer(min: 0, max: 10).filter(&:even?).generate   # => 4
 ```
+
+Note: for `Pbt.set` and `Pbt.hash`, `min:` and `max:` bound the number of element/pair draws *before* deduplication (so duplicate elements/keys can result in fewer entries than `min:`).
 
 See [ArbitraryMethods](https://github.com/ohbarye/pbt/blob/main/lib/pbt/arbitrary/arbitrary_methods.rb) module for more details.
 
@@ -273,6 +276,7 @@ Pbt.assert(seed: 42) { property }
 - **Symbolic references (`Pbt::Stateful::Ref`)**: `c.next_state { |s, args, ref| ... }` can store `ref` in the pure model state and select it in later commands' `c.arguments`. During execution, `Ref`s inside `Array`, `Hash`, `Set`, `Struct`, and `Data` are resolved to concrete SUT return values (including `nil`).
 - **Best-first shrinking**: performs post-failure truncation, ddmin chunk deletion, single-step deletion, `initial_state` shrinking, and contextual step argument shrinking (preserving `Pbt.frequency`, `Pbt.one_of`, and block `#map` shrink trees), with offline model validation (`Arbitrary#cover?`, `guard`, `precondition`, `Ref` dependencies), `FailureSignature` equivalence, deduplication, and `max_shrink_attempts` budget.
 - **Replay & statistics**: `details = Pbt.check { property }; property.replay(details.counterexample)` replays the minimized `Pbt::Stateful::Run`; `Pbt.statistics(property) { |run| run.command_names }` inspects generated command distributions.
+- **Step count bounds (`min_steps:` / `max_steps:`)**: `min_steps:` sets the target lower bound for generated run lengths; if a run reaches a terminal state where no command `guard` is truthy, generation stops early at that terminal state.
 - **Worker behavior**: `Pbt.stateful` runs sequentially by default even when `Pbt.configuration.worker = :ractor`. Passing `worker: :ractor` explicitly raises `Pbt::InvalidConfiguration` before generation.
 
 ## What if property-based tests fail?
@@ -360,7 +364,7 @@ Pbt.configure do |config|
   config.num_runs = 100
 
   # The seed to use for random number generation.
-  # It's useful to reproduce failed test with the seed you'd pick up from failure messages. Default is a random seed.
+  # Initialized once per process by default; pass `seed:` to `Pbt.assert` / `Pbt.check` to vary or replay a failure.
   config.seed = 42
 
   # Whether to report exceptions in threads.

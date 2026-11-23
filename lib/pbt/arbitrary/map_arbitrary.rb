@@ -60,7 +60,10 @@ module Pbt
 
         Enumerator.new do |y|
           @arb.shrink(@unmapper.call(current)).each do |v|
-            y.yield @mapper.call(v)
+            mapped = @mapper.call(v)
+            next if mapped.equal?(current) || mapped.eql?(current)
+
+            y.yield mapped
           end
         end
       end
