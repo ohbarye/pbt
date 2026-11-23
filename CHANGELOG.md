@@ -1,7 +1,7 @@
 ## [Unreleased]
 
 - [Breaking change] Replace `Pbt.stateful(model:, sut:)` with a redesigned yield-based DSL (`Pbt.stateful(max_steps:, min_steps:, max_shrink_attempts:) { |m| ... }`) featuring `initial_state` (value, block, or shrinkable `Arbitrary`), `sut`+`teardown` / `around` lifecycle, weighted commands (`guard`, `arguments`, `precondition`, `next_state`, `run`, `verify`), `invariant`s, symbolic `Ref`s, best-first shrinking with offline `cover?` validation and `FailureSignature` equivalence, `property.replay`, `Pbt.statistics` support, and multiline counterexample reporting ([#67](https://github.com/ohbarye/pbt/issues/67)).
-- Add complete RBS type signatures under `sig/` (`sig/pbt.rbs`, `sig/pbt/*.rbs`, `sig/manifest.yaml`) and run `rbs validate` in default `rake` / CI.
+- Add complete RBS type signatures under `sig/` (`sig/pbt.rbs`, `sig/pbt/*.rbs`, `sig/manifest.yaml`) with `rbs validate` and `steep check` in default `rake` / CI.
 
 ## [0.8.0] - 2026-11-22
 

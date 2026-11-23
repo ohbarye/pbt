@@ -16,7 +16,12 @@ task :rbs do
   sh "bundle", "exec", "rbs", *args
 end
 
-task default: %i[spec standard rbs]
+desc "Type-check public API usage with Steep"
+task :steep do
+  sh "bundle", "exec", "steep", "check"
+end
+
+task default: %i[spec standard rbs steep]
 
 namespace :benchmark do
   task all: ["success:simple", "success:cpu_bound", "success:io_bound", "failure:simple"]

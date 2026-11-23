@@ -43,8 +43,8 @@ module Pbt
       def sample: (?Random rng) -> Sample[T]
       def contextual?: () -> bool
       def map: [U] () { (T) -> U } -> MapArbitrary[U]
-             | [U] (^(T) -> U mapper, ?(^(U) -> untyped)? unmapper) -> MapArbitrary[U]
-             | (_Callable mapper, ?_Callable? unmapper) -> MapArbitrary[untyped]
+             | [U] (^(T) -> U mapper, ?(^(untyped) -> untyped | _Callable)? unmapper) -> MapArbitrary[U]
+             | (_Callable mapper, ?(^(untyped) -> untyped | _Callable)? unmapper) -> MapArbitrary[untyped]
       def filter: (?max_attempts: Integer) { (T) -> boolish } -> FilterArbitrary[T]
     end
 
@@ -86,7 +86,7 @@ module Pbt
     end
 
     class MapArbitrary[out T = untyped] < Arbitrary[T]
-      def initialize: (_Arbitrary[untyped] arb, _Callable mapper, ?_Callable? unmapper, ?bijective: bool) -> void
+      def initialize: (_Arbitrary[untyped] arb, ^(untyped) -> untyped | _Callable mapper, ?(^(untyped) -> untyped | _Callable)? unmapper, ?bijective: bool) -> void
     end
 
     class FloatArbitrary < MapArbitrary[Float]
