@@ -241,9 +241,9 @@ RSpec.describe "Arbitrary#cover?" do
 
     it "works soundly for FloatArbitrary" do
       expect(Pbt.float.cover?(0.0)).to be(true)
-      expect(Pbt.float.cover?(1.5)).to be_nil
-      expect(Pbt.float.cover?(1_000_001.0)).to be(false)
-      expect(Pbt.float.cover?(Float::MIN)).to be(false)
+      expect(Pbt.float.cover?(1.5)).to be(true)
+      expect(Pbt.float.cover?(1_000_001.0)).to be(true)
+      expect(Pbt.float(min: 0.0, max: 10.0).cover?(10.5)).to be(false)
       expect(Pbt.float.cover?(Float::NAN)).to be(false)
       expect(Pbt.float.cover?(Float::INFINITY)).to be(false)
       expect(Pbt.float.cover?("1.5")).to be(false)

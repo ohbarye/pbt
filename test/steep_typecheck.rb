@@ -66,7 +66,13 @@ pbt_obj_hash = Pbt.hash
 set_val = Pbt.set(Pbt.integer, min: 0, max: 3).generate
 
 # @type var float_val: Float
-float_val = Pbt.float.generate
+float_val = Pbt.float(min: 0.0, max: 10.0, allow_nan: false, allow_infinity: false).generate
+
+# @type var float_int_bounds_val: Float
+float_int_bounds_val = Pbt.float(min: 0, max: 10).generate
+
+# @type var str_val: String
+str_val = Pbt.string(min: 0, max: 5).generate
 
 # @type var nil_val: nil
 nil_val = Pbt.nil.generate
@@ -90,7 +96,7 @@ cov = Pbt.integer.cover?(1)
 _ = [
   int_val, nat_val, arr_val, tuple_val, fixed_hash_val, choose_val,
   mapped_val, mapped_proc_val, bound_val, bound_proc_val, filtered_val, freq_val, one_of_val,
-  const_from_val, hash_val, pbt_obj_hash, set_val, float_val, nil_val,
+  const_from_val, hash_val, pbt_obj_hash, set_val, float_val, float_int_bounds_val, str_val, nil_val,
   date_val, time_val, sv, ss, cov
 ]
 

@@ -132,9 +132,11 @@ There are many built-in arbitraries in `Pbt`. You can use them to generate rando
 ```ruby
 Pbt.integer.generate                  # => 42
 Pbt.integer(min: -1, max: 8).generate # => Integer between -1 and 8
+Pbt.float(min: 0.0, max: 1.0).generate # => Float between 0.0 and 1.0
 
 Pbt.symbol.generate                   # => :atq
 
+Pbt.string.generate                   # => "aagjZfao" (printable ASCII)
 Pbt.ascii_char.generate               # => "a"
 Pbt.ascii_string.generate             # => "aagjZfao"
 

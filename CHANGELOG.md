@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Add `Pbt.string` (printable ASCII default), extend `Pbt.float` with `min:`, `max:`, `allow_nan:`, and `allow_infinity:` plus float-aware binary-search shrinking, and fix `ChooseArbitrary#shrink` for `Float` and exclusive ranges ([#85](https://github.com/ohbarye/pbt/issues/85)).
 - Add `Arbitrary#bind` / `#flat_map` (`BindArbitrary`) for dependent value generation with integrated `Sample` shrinking ([#84](https://github.com/ohbarye/pbt/issues/84)).
 - Improve `IntegerArbitrary#shrink` to yield binary-search candidates toward `target`, enabling greedy shrinking to converge to exact failure thresholds ([#82](https://github.com/ohbarye/pbt/issues/82)).
 
