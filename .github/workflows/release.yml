@@ -22,3 +22,10 @@ jobs:
           ruby-version: ruby
 
       - uses: rubygems/release-gem@5c53f5308233b7c0f47411f0471b3faae6fa57b2 # v1.4.2
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag_name="v$(ruby -Ilib -rpbt/version -e 'print Pbt::VERSION')"
+          gh release create "${tag_name}" --verify-tag --generate-notes

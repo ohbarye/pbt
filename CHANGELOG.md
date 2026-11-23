@@ -1,7 +1,12 @@
 ## [Unreleased]
 
-- [Breaking change] Replace `Pbt.stateful(model:, sut:)` with a redesigned yield-based DSL (`Pbt.stateful(max_steps:, min_steps:, max_shrink_attempts:) { |m| ... }`) featuring `initial_state` (value, block, or shrinkable `Arbitrary`), `sut`+`teardown` / `around` lifecycle, weighted commands (`guard`, `arguments`, `precondition`, `next_state`, `run`, `verify`), `invariant`s, symbolic `Ref`s, best-first shrinking with offline `cover?` validation and `FailureSignature` equivalence, `property.replay`, `Pbt.statistics` support, and multiline counterexample reporting ([#67](https://github.com/ohbarye/pbt/issues/67)).
-- Add complete RBS type signatures under `sig/` (`sig/pbt.rbs`, `sig/pbt/*.rbs`, `sig/manifest.yaml`) with `rbs validate` and `steep check` in default `rake` / CI.
+## [0.9.0] - 2026-11-23
+
+- [Breaking change] Replace `Pbt.stateful(model:, sut:)` with a redesigned yield-based DSL (`Pbt.stateful(max_steps:, min_steps:, max_shrink_attempts:) { |m| ... }`) featuring `initial_state` (value, block, or shrinkable `Arbitrary`), `sut`+`teardown` / `around` lifecycle, weighted commands (`guard`, `arguments`, `precondition`, `next_state`, `run`, `verify`), `invariant`s, symbolic `Ref`s, best-first shrinking with offline `cover?` validation and `FailureSignature` equivalence, `property.replay`, `Pbt.statistics` support, and multiline counterexample reporting [#67](https://github.com/ohbarye/pbt/issues/67) [#79](https://github.com/ohbarye/pbt/pull/79) [#80](https://github.com/ohbarye/pbt/pull/80).
+  - Migration note: replace `Pbt.stateful(model:, sut:)` and per-command classes (`applicable?`, `run!`, `verify!`) with `Pbt.stateful { |m| m.initial_state ...; m.sut { ... }; m.command(:name) { |c| c.guard ...; c.arguments ...; c.next_state ...; c.run ...; c.verify ... } }`. See `README.md` for full examples.
+- Add complete RBS type signatures under `sig/` (`sig/pbt.rbs`, `sig/pbt/*.rbs`, `sig/manifest.yaml`) with `rbs validate` and `steep check` in CI [#81](https://github.com/ohbarye/pbt/pull/81).
+- Tighten `pbt.gemspec` packaged file allowlist to ship `lib/`, `sig/`, and root documentation only.
+- Automatically create a GitHub Release in `.github/workflows/release.yml` when releasing a gem.
 
 ## [0.8.0] - 2026-11-22
 
