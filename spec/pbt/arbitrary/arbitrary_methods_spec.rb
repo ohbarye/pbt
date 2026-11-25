@@ -162,6 +162,22 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
     end
   end
 
+  describe ".string" do
+    it "generates printable ASCII strings within requested bounds" do
+      arb = Pbt.string(min: 1, max: 5)
+      aggregate_failures do
+        100.times do
+          val = arb.generate(Random.new)
+          expect(val).to be_a(String)
+          expect(val.size).to be_between(1, 5)
+          val.chars.each { |c| expect(Pbt::Arbitrary::PRINTABLE_ASCII_CHARS).to include(c) }
+        end
+      end
+      expect(arb.cover?("hello")).to be(true)
+      expect(arb.cover?("")).to be(false)
+    end
+  end
+
   describe ".printable_ascii_string" do
     it "generates a string" do
       arb = Pbt.printable_ascii_string(min: 1, max: 5)

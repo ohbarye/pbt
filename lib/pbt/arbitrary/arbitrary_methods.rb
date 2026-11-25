@@ -175,6 +175,16 @@ module Pbt
         constant_from(*PRINTABLE_ASCII_CHARS)
       end
 
+      # For printable ascii strings (default string generator).
+      # Use `ascii_string` to include ASCII control characters, or `printable_string` for full Unicode.
+      #
+      # @see Pbt.printable_ascii_string
+      # @param kwargs [Hash] Options for ArrayArbitrary (`min:`, `max:`, `empty:`).
+      # @return [Arbitrary<String>]
+      def string(**kwargs)
+        printable_ascii_string(**kwargs)
+      end
+
       # For printable ascii strings.
       #
       # @see Pbt.array
@@ -209,11 +219,17 @@ module Pbt
         MapArbitrary.new(array(constant_from(*SYMBOL_SAFE_CHARS), empty: false, **kwargs), SYMBOL_MAPPER, SYMBOL_UNMAPPER, bijective: true)
       end
 
-      # For floats.
+      # For floats within optional finite `Integer` / `Float` bounds, with opt-in NaN / Infinity support.
+      # Omitted bounds default generation to `-1_000_000.0..1_000_000.0` (or a scaled span when one-sided)
+      # while leaving `cover?` unbounded on omitted sides.
       #
-      # @return [Arbitrary<Float>]
-      def float
-        FloatArbitrary.new
+      # @param min [Integer, Float, nil] Inclusive finite lower bound.
+      # @param max [Integer, Float, nil] Inclusive finite upper bound.
+      # @param allow_nan [Boolean] Whether `Float::NAN` may be generated. Default is `false`.
+      # @param allow_infinity [Boolean] Whether `+/-Float::INFINITY` may be generated when the corresponding bound is unbounded. Default is `false`.
+      # @return [FloatArbitrary]
+      def float(min: nil, max: nil, allow_nan: false, allow_infinity: false)
+        FloatArbitrary.new(min: min, max: max, allow_nan: allow_nan, allow_infinity: allow_infinity)
       end
 
       # For symbols.
