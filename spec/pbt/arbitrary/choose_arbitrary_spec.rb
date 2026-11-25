@@ -25,9 +25,9 @@ RSpec.describe Pbt::Arbitrary::ChooseArbitrary do
       expect(arb.shrink(val)).to be_a(Enumerator)
     end
 
-    it "returns an Enumerator that iterates halved integers towards the min" do
+    it "returns an Enumerator that iterates binary-search integers towards the min" do
       arb = Pbt::Arbitrary::ChooseArbitrary.new(-2..10)
-      expect(arb.shrink(50).to_a).to eq [10, 4, 1, 0, -1, -2]
+      expect(arb.shrink(10).to_a).to eq [-2, 4, 7, 8, 9]
     end
 
     context "when current value and target is same" do

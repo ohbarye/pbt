@@ -23,30 +23,30 @@ RSpec.describe Pbt::Arbitrary::TupleArbitrary do
     it "returns an Enumerator that returns shrunken values" do
       arb = Pbt::Arbitrary::TupleArbitrary.new(Pbt.integer)
       expect(arb.shrink([50]).to_a).to eq [
+        [0],
         [25],
-        [13],
-        [7],
-        [4],
-        [2],
-        [1],
-        [0]
+        [37],
+        [43],
+        [46],
+        [48],
+        [49]
       ]
     end
 
     it "returns an Enumerator that returns shrunken values for each arbitraries" do
       arb = Pbt::Arbitrary::TupleArbitrary.new(Pbt.integer, Pbt.integer)
       expect(arb.shrink([10, 20]).to_a).to eq [
-        [5, 20],
-        [3, 20],
-        [2, 20],
-        [1, 20],
         [0, 20],
+        [5, 20],
+        [7, 20],
+        [8, 20],
+        [9, 20],
+        [10, 0],
         [10, 10],
-        [10, 5],
-        [10, 3],
-        [10, 2],
-        [10, 1],
-        [10, 0]
+        [10, 15],
+        [10, 17],
+        [10, 18],
+        [10, 19]
       ]
     end
 

@@ -27,30 +27,30 @@ RSpec.describe Pbt::Arbitrary::FixedHashArbitrary do
     it "returns an Enumerator that returns shrunken values" do
       arb = Pbt::Arbitrary::FixedHashArbitrary.new(x: Pbt.integer)
       expect(arb.shrink({x: 50}).to_a).to eq [
+        {x: 0},
         {x: 25},
-        {x: 13},
-        {x: 7},
-        {x: 4},
-        {x: 2},
-        {x: 1},
-        {x: 0}
+        {x: 37},
+        {x: 43},
+        {x: 46},
+        {x: 48},
+        {x: 49}
       ]
     end
 
     it "returns an Enumerator that returns shrunken values for each arbitraries" do
       arb = Pbt::Arbitrary::FixedHashArbitrary.new(x: Pbt.integer, y: Pbt.integer)
       expect(arb.shrink({x: 10, y: 20}).to_a).to eq [
-        {x: 5, y: 20},
-        {x: 3, y: 20},
-        {x: 2, y: 20},
-        {x: 1, y: 20},
         {x: 0, y: 20},
+        {x: 5, y: 20},
+        {x: 7, y: 20},
+        {x: 8, y: 20},
+        {x: 9, y: 20},
+        {x: 10, y: 0},
         {x: 10, y: 10},
-        {x: 10, y: 5},
-        {x: 10, y: 3},
-        {x: 10, y: 2},
-        {x: 10, y: 1},
-        {x: 10, y: 0}
+        {x: 10, y: 15},
+        {x: 10, y: 17},
+        {x: 10, y: 18},
+        {x: 10, y: 19}
       ]
     end
 

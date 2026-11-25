@@ -48,9 +48,9 @@ RSpec.describe Pbt::Arbitrary::MapArbitrary do
       expect(arb.shrink(val)).to be_a(Enumerator)
     end
 
-    it "returns an Enumerator that iterates halved values when unmapper is given" do
+    it "returns an Enumerator that iterates binary-search values when unmapper is given" do
       arb = Pbt.integer.map(->(n) { n.to_s }, ->(n) { n.to_i })
-      expect(arb.shrink("50").to_a).to eq ["25", "13", "7", "4", "2", "1", "0"]
+      expect(arb.shrink("50").to_a).to eq ["0", "25", "37", "43", "46", "48", "49"]
     end
 
     context "when current value and target is same" do
@@ -77,11 +77,11 @@ RSpec.describe Pbt::Arbitrary::MapArbitrary do
       sample = arb.sample(rng)
       expect(sample.value).to eq({value: 10, doubled: 20})
       expect(sample.shrink.map(&:value)).to eq([
+        {value: 0, doubled: 0},
         {value: 5, doubled: 10},
-        {value: 3, doubled: 6},
-        {value: 2, doubled: 4},
-        {value: 1, doubled: 2},
-        {value: 0, doubled: 0}
+        {value: 7, doubled: 14},
+        {value: 8, doubled: 16},
+        {value: 9, doubled: 18}
       ])
     end
 
@@ -94,7 +94,7 @@ RSpec.describe Pbt::Arbitrary::MapArbitrary do
 
       sample = arb.sample(rng)
       expect(sample.value).to eq({label: "v5"})
-      expect(sample.shrink.map(&:value)).to eq([{label: "v3"}, {label: "v1"}])
+      expect(sample.shrink.map(&:value)).to eq([{label: "v1"}, {label: "v3"}, {label: "v4"}])
     end
 
     it "supports non-Proc callable objects in sample and Pbt.check" do

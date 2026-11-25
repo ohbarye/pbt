@@ -38,36 +38,36 @@ RSpec.describe Pbt::Arbitrary::ArrayArbitrary do
 
     it "returns an Enumerator that iterates arrays with shrunken length or value" do
       arb = Pbt::Arbitrary::ArrayArbitrary.new(Pbt.integer)
-      expect(arb.shrink([3]).to_a).to eq [[], [2], [1], [0]]
-      expect(arb.shrink([2, 0]).to_a).to eq [[2], [0], [], [1, 0], [0, 0]]
+      expect(arb.shrink([3]).to_a).to eq [[], [0], [1], [2]]
+      expect(arb.shrink([2, 0]).to_a).to eq [[], [2], [0], [0, 0], [1, 0]]
       expect(arb.shrink([13, 7, 9]).to_a).to eq [
-        [13, 7],
-        [7, 9],
+        [],
         [13],
         [7],
         [9],
-        [],
+        [13, 7],
+        [7, 9],
         [13, 9],
-        [7, 7, 9],
-        [4, 7, 9],
-        [2, 7, 9],
-        [1, 7, 9],
         [0, 7, 9],
-        [13, 4, 9],
-        [13, 2, 9],
-        [13, 1, 9],
+        [6, 7, 9],
+        [9, 7, 9],
+        [11, 7, 9],
+        [12, 7, 9],
         [13, 0, 9],
-        [13, 7, 5],
-        [13, 7, 3],
-        [13, 7, 2],
-        [13, 7, 1],
-        [13, 7, 0]
+        [13, 3, 9],
+        [13, 5, 9],
+        [13, 6, 9],
+        [13, 7, 0],
+        [13, 7, 4],
+        [13, 7, 6],
+        [13, 7, 7],
+        [13, 7, 8]
       ]
     end
 
     it "still shrinks elements when array length is already at min_length" do
       arb = Pbt::Arbitrary::ArrayArbitrary.new(Pbt.integer(min: 0, max: 100), 1, 1)
-      expect(arb.shrink([10]).to_a).to eq [[5], [3], [2], [1], [0]]
+      expect(arb.shrink([10]).to_a).to eq [[0], [5], [7], [8], [9]]
 
       contextual = Pbt.array(Pbt.integer(min: 0, max: 100).map { |n| "item-#{n}" }, min: 1, max: 1)
       result = Pbt.check(seed: 42, num_runs: 10, worker: :none) do

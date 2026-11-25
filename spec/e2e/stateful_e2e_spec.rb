@@ -161,7 +161,7 @@ RSpec.describe "Pbt.stateful end-to-end" do
     expect(details.failed).to be(true)
     expect(details.num_shrinks).to be > 0
     expect(details.counterexample.steps.size).to eq(1)
-    expect(details.counterexample.steps.first.args[:delta]).to be_between(20, 40)
+    expect(details.counterexample.steps.first.args[:delta]).to eq(20)
     expect([0, 50]).to include(details.counterexample.initial_state[:start])
   end
 
@@ -261,7 +261,7 @@ RSpec.describe "Pbt.stateful end-to-end" do
 
     ce = details.counterexample
     expect(ce.command_names).to eq([:create, :deposit, :close])
-    expect(ce.steps[1].args[:amount]).to be_between(10, 19)
+    expect(ce.steps[1].args[:amount]).to eq(10)
     expect(details.num_shrinks).to be > 0
     # Same symbolic Ref links create -> deposit -> close
     created_ref = Pbt::Stateful::Ref.new(step_id: ce.steps[0].id)
