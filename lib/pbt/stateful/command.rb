@@ -32,6 +32,11 @@ module Pbt
         raise_model_error("guard", e)
       end
 
+      # @return [Boolean]
+      def state_dependent_arguments?
+        @arguments_source.is_a?(Proc)
+      end
+
       # @param state [Object]
       # @return [Object] arbitrary responding to generate/shrink (or sample)
       def arguments_for(state)

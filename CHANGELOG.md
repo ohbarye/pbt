@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Add `Arbitrary#bind` / `#flat_map` (`BindArbitrary`) for dependent value generation with integrated `Sample` shrinking ([#84](https://github.com/ohbarye/pbt/issues/84)).
 - Improve `IntegerArbitrary#shrink` to yield binary-search candidates toward `target`, enabling greedy shrinking to converge to exact failure thresholds ([#82](https://github.com/ohbarye/pbt/issues/82)).
 
 ## [0.9.0] - 2026-11-23
