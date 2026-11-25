@@ -8,14 +8,16 @@ Gem::Specification.new do |spec|
   spec.authors = ["ohbarye"]
   spec.email = ["over.rye@gmail.com"]
 
-  spec.summary = "Property-Based Testing tool for Ruby, utilizing Ractor for parallelizing test cases."
+  spec.summary = "Property-Based Testing for Ruby with shrinking, stateful testing, and optional Ractor parallelism."
   spec.homepage = "https://github.com/ohbarye/pbt"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.3"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = spec.homepage
-  spec.metadata["changelog_uri"] = "#{spec.homepage}/releases"
+  spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
+  spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
+  spec.metadata["rubygems_mfa_required"] = "true"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.

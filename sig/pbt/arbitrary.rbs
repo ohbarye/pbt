@@ -57,8 +57,8 @@ module Pbt
       def shrink: (Integer current, ?target: Integer?) -> Enumerator[Integer, untyped]
     end
 
-    class ChooseArbitrary < Arbitrary[Integer | Float]
-      def initialize: (Range[Integer] | Range[Float] range) -> void
+    class ChooseArbitrary[out T = Integer | Float] < Arbitrary[T]
+      def initialize: (Range[T] range) -> void
     end
 
     class ConstantArbitrary[out T = untyped] < Arbitrary[T]
@@ -114,7 +114,8 @@ module Pbt
       def array: [T] (_Arbitrary[T] arb, ?min: Integer, ?max: Integer, ?empty: bool) -> ArrayArbitrary[T]
       def tuple: (*_Arbitrary[untyped] arbs) -> TupleArbitrary
       def fixed_hash: (Hash[untyped, _Arbitrary[untyped]] hash) -> FixedHashArbitrary
-      def choose: (Range[Integer] | Range[Float] range) -> ChooseArbitrary
+      def choose: (Range[Integer] range) -> ChooseArbitrary[Integer]
+                | (Range[Float] range) -> ChooseArbitrary[Float]
       def constant_from: [T] (*T choices) -> ConstantFromArbitrary[T]
       def one_of: [T] (*_Arbitrary[T] arbitraries) -> OneOfArbitrary[T]
       def frequency: [T] (*[Integer, _Arbitrary[T]] choices) -> FrequencyArbitrary[T]
@@ -128,7 +129,7 @@ module Pbt
       def printable_ascii_char: () -> ConstantFromArbitrary[String]
       def string: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[String]
       def printable_ascii_string: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[String]
-      def printable_char: () -> ConstantFromArbitrary[String]
+      def printable_char: () -> MapArbitrary[String]
       def printable_string: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[String]
       def symbol: (?min: Integer, ?max: Integer, ?empty: bool) -> MapArbitrary[Symbol]
       def float: (?min: (Integer | Float)?, ?max: (Integer | Float)?, ?allow_nan: bool, ?allow_infinity: bool) -> FloatArbitrary

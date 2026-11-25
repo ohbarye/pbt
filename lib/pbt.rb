@@ -65,6 +65,8 @@ module Pbt
   # @param predicate [Proc] Test code that receives generated values and runs the test.
   # @return [Check::Property]
   def self.property(*args, **kwargs, &predicate)
+    raise ArgumentError, "Pbt.property requires a predicate block" unless predicate
+
     arb = to_arbitrary(args, kwargs)
     Check::Property.new(
       arb,
@@ -79,7 +81,8 @@ module Pbt
   # `Pbt.statistics`, and `property.replay(run)`.
   #
   # @param max_steps [Integer] Maximum number of commands per generated run (default: 20).
-  # @param min_steps [Integer] Minimum number of commands per generated run (default: 1).
+  # @param min_steps [Integer] Target minimum number of commands per generated run (default: 1).
+  #   A run may stop earlier if it reaches a terminal state where no command guard is truthy.
   # @param max_shrink_attempts [Integer] Total shrink attempt budget per failure (default: 1000).
   # @yieldparam m [Pbt::Stateful::SpecBuilder] Model builder for `initial_state`, `sut`/`teardown`/`around`, `command`, and `invariant`.
   # @return [Pbt::Stateful::Property]
@@ -118,15 +121,27 @@ module Pbt
     # @raise [ArgumentError] When both positional and keyword arguments are given
     def to_arbitrary(args, kwargs)
       if args == [] && kwargs != {}
+        validate_arbitraries!(kwargs.values)
         fixed_hash(kwargs)
       elsif args != [] && kwargs == {}
+        validate_arbitraries!(args)
         # wrap by tuple arbitrary so that property class doesn't have to take care of an array
         (args.size == 1) ? args.first : tuple(*args)
+      elsif args == [] && kwargs == {}
+        raise ArgumentError, "Pbt.property requires at least one arbitrary"
       else
         raise ArgumentError, <<~MSG
           It's not supported to use both positional and keyword arguments at the same time.
           cf. https://www.ruby-lang.org/en/news/2019/12/12/separation-of-positional-and-keyword-arguments-in-ruby-3-0/
         MSG
+      end
+    end
+
+    def validate_arbitraries!(arbs)
+      arbs.each do |arb|
+        unless arb.respond_to?(:generate) && arb.respond_to?(:shrink)
+          raise ArgumentError, "Pbt.property expects arbitraries responding to generate and shrink, got #{arb.class}"
+        end
       end
     end
   end

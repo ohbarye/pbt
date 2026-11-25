@@ -61,10 +61,14 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
   end
 
   describe ".char" do
-    it "generates a character" do
-      val = Pbt.char.generate(Random.new)
-      expect(val).to be_a(String)
-      expect(val.size).to eq(1)
+    it "generates a valid UTF-8 Unicode scalar character without surrogates" do
+      rng = Random.new(476)
+      values = Array.new(500) { Pbt.char.generate(rng) }
+      expect(values).to all(be_a(String))
+      expect(values).to all(satisfy { |c| c.valid_encoding? && c.length == 1 })
+      expect(Pbt.char.cover?("中")).to be(true)
+      expect(Pbt.char.cover?("😀")).to be(true)
+      expect(Pbt.char.cover?("\xED\xA0\x80")).to be(false)
     end
 
     describe "#shrink" do
@@ -122,7 +126,9 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
       expect(val.size).to eq(1)
     end
 
-    it "is printable ascii char" do
+    it "is ascii char including DEL without duplicate entries" do
+      expect(Pbt::Arbitrary::ASCII_CHARS.uniq.size).to eq(Pbt::Arbitrary::ASCII_CHARS.size)
+      expect(Pbt::Arbitrary::ASCII_CHARS).to include("\x7F")
       val = Pbt.ascii_char.generate(Random.new)
       expect(Pbt::Arbitrary::ASCII_CHARS).to include(val)
     end
@@ -200,35 +206,39 @@ RSpec.describe Pbt::Arbitrary::ArbitraryMethods do
   end
 
   describe ".printable_char" do
-    it "generates a character" do
-      val = Pbt.printable_char.generate(Random.new)
-      expect(val).to be_a(String)
-      expect(val.size).to eq(1)
-    end
+    it "generates valid printable Unicode characters across ASCII, BMP, and supplementary planes" do
+      arb = Pbt.printable_char
+      rng = Random.new(42)
+      values = Array.new(300) { arb.generate(rng) }
 
-    it "is printable char" do
-      val = Pbt.printable_char.generate(Random.new)
-      expect(Pbt::Arbitrary::PRINTABLE_CHARS).to include(val)
+      expect(values).to all(be_a(String))
+      expect(values).to all(satisfy { |c| c.valid_encoding? && c.length == 1 && arb.cover?(c) })
+      expect(values.any? { |c| c.ord.between?(0x20, 0x7E) }).to be(true)
+      expect(values.any? { |c| c.ord.between?(0xA0, 0xD7FF) }).to be(true)
+      expect(values.any? { |c| c.ord >= 0x10000 }).to be(true)
+
+      expect(arb.cover?("A")).to be(true)
+      expect(arb.cover?("中")).to be(true)
+      expect(arb.cover?("😀")).to be(true)
+      expect(arb.cover?("\n")).to be(false)
+      expect(arb.cover?("\x7F")).to be(false)
+      expect(arb.cover?("\u0085")).to be(false)
     end
   end
 
   describe ".printable_string" do
-    it "generates a string" do
+    it "generates a string of valid printable Unicode characters" do
       arb = Pbt.printable_string(min: 1, max: 5)
+      char_arb = Pbt.printable_char
+      rng = Random.new(42)
       aggregate_failures do
         100.times do
-          val = arb.generate(Random.new)
+          val = arb.generate(rng)
           expect(val).to be_a(String)
-          expect(val.size).to be >= 1
-          expect(val.size).to be <= 5
+          expect(val.valid_encoding?).to be(true)
+          expect(val.size).to be_between(1, 5)
+          val.chars.each { |char| expect(char_arb.cover?(char)).to be(true) }
         end
-      end
-    end
-
-    it "is printable string" do
-      val = Pbt.printable_string.generate(Random.new)
-      val.chars.each do |char|
-        expect(Pbt::Arbitrary::PRINTABLE_CHARS).to include(char)
       end
     end
   end

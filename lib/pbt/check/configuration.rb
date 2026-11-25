@@ -14,7 +14,7 @@ module Pbt
       # @param verbose [Boolean] Whether to print verbose output. Default is `false`.
       # @param worker [Symbol] The concurrency method to use. `:ractor` and `:none` are supported. Default is `:none`.
       # @param num_runs [Integer] The number of runs to perform. Default is `100`.
-      # @param seed [Integer] The seed to use for random number generation. It's useful to reproduce failed test with the seed you'd pick up from failure messages. Default is a random seed.
+      # @param seed [Integer] The seed to use for random number generation. Initialized once per process by default; override via `Pbt.assert(seed: ...)` / `Pbt.check(seed: ...)` to vary or reproduce a specific failure.
       # @param thread_report_on_exception [Boolean] Whether to report exceptions in threads. It's useful to suppress error logs on Ractor that reports many errors. Default is `false`.
       # @param max_skips [Integer, nil] Maximum number of skipped cases allowed via `Pbt.assume`. Defaults to `num_runs * 10` when `nil`.
       def initialize(

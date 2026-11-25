@@ -10,6 +10,9 @@ module Pbt
     # @private
     # @!attribute [r] run_execution [Reporter::RunExecution]
     class RunnerIterator < DelegateClass(Array)
+      DEFAULT_MAX_SHRINK_STEPS = 10_000
+      private_constant :DEFAULT_MAX_SHRINK_STEPS
+
       attr_reader :run_execution
 
       # @param source_values [Enumerator] Enumerator of generated values by arbitrary.
@@ -17,12 +20,16 @@ module Pbt
       # @param verbose [Boolean] Controls the verbosity of the output.
       # @param target_runs [Integer, nil] Number of non-skipped runs to complete before stopping.
       # @param max_skips [Integer, nil] Maximum number of skipped initial runs allowed via `Pbt.assume`.
-      def initialize(source_values, property, verbose, target_runs: nil, max_skips: nil)
+      # @param max_shrink_steps [Integer] Safety cap on accepted shrink transitions for non-stateful shrinking.
+      def initialize(source_values, property, verbose, target_runs: nil, max_skips: nil, max_shrink_steps: DEFAULT_MAX_SHRINK_STEPS)
         @run_execution = Reporter::RunExecution.new(verbose)
         @property = property
         @source_stream = source_values
         @target_runs = target_runs
         @max_skips = max_skips
+        @max_shrink_steps = max_shrink_steps
+        @shrink_steps = 0
+        @seen_bare_failures = {}
         @initial_failure = nil
         @initial_offset = 0
         @next_values = @target_runs ? next_initial_batch(@target_runs) : source_values
@@ -100,15 +107,21 @@ module Pbt
           end
 
           # failed run
+          shrinking = !@initial_failure.nil?
           @initial_failure ||= c.exception
           @run_execution.record_failure(c)
+          @shrink_steps += 1 if shrinking
+
           @next_values =
-            if @property.respond_to?(:shrink_case)
+            if @shrink_steps >= @max_shrink_steps
+              [].each
+            elsif @property.respond_to?(:shrink_case)
               @property.shrink_case(c)
             elsif c.sample
               c.sample.shrink
             else
-              @property.shrink(c.val)
+              mark_bare_seen(c.val)
+              filter_seen_bare_candidates(@property.shrink(c.val))
             end
           true
         else
@@ -119,6 +132,28 @@ module Pbt
       end
 
       private
+
+      def mark_bare_seen(value)
+        @seen_bare_failures[value] = true
+      rescue
+        nil
+      end
+
+      def bare_seen?(value)
+        @seen_bare_failures.key?(value)
+      rescue
+        false
+      end
+
+      def filter_seen_bare_candidates(enum)
+        Enumerator.new do |y|
+          enum.each do |candidate|
+            next if bare_seen?(candidate)
+
+            y << candidate
+          end
+        end
+      end
 
       def next_initial_batch(count)
         @initial_offset = @run_execution.num_successes + @run_execution.num_skips

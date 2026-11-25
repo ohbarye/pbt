@@ -14,6 +14,11 @@ module Pbt
     module RunnerMethods
       include Check::Tosser
 
+      private :toss
+
+      SUPPORTED_WORKERS = [:none, :ractor].freeze
+      private_constant :SUPPORTED_WORKERS
+
       # Run a property based test and report its result.
       #
       # @see Check::Configuration
@@ -36,8 +41,12 @@ module Pbt
       # @param property [Proc] Proc that returns Property instance.
       # @return [RunDetails]
       def check(**options, &property)
+        raise ArgumentError, "Pbt.check requires a block returning a property" unless property
+
+        validate_option_keys!(options)
         property = property.call
         config = Pbt.configuration.to_h.merge(options.to_h)
+        validate_config!(config)
 
         if property.respond_to?(:stateful?) && property.stateful?
           if options.key?(:worker) && config[:worker] == :ractor
@@ -45,11 +54,6 @@ module Pbt
           end
 
           config[:worker] = :none unless options.key?(:worker)
-        end
-
-        max_skips = config[:max_skips]
-        if !max_skips.nil? && !(max_skips.is_a?(Integer) && max_skips >= 0)
-          raise Pbt::InvalidConfiguration, "max_skips must be a non-negative Integer or nil"
         end
 
         initial_values = toss(property, config[:seed])
@@ -60,6 +64,35 @@ module Pbt
       end
 
       private
+
+      def validate_option_keys!(options)
+        unknown = options.keys - Configuration.members
+        return if unknown.empty?
+
+        raise Pbt::InvalidConfiguration, "unknown option(s): #{unknown.map(&:inspect).join(", ")}"
+      end
+
+      def validate_config!(config)
+        num_runs = config[:num_runs]
+        unless num_runs.is_a?(Integer) && num_runs.positive?
+          raise Pbt::InvalidConfiguration, "num_runs must be a positive Integer, got #{num_runs.inspect}"
+        end
+
+        worker = config[:worker]
+        unless SUPPORTED_WORKERS.include?(worker)
+          raise Pbt::InvalidConfiguration, "worker must be one of #{SUPPORTED_WORKERS.inspect}, got #{worker.inspect}"
+        end
+
+        seed = config[:seed]
+        unless seed.is_a?(Integer)
+          raise Pbt::InvalidConfiguration, "seed must be an Integer, got #{seed.inspect}"
+        end
+
+        max_skips = config[:max_skips]
+        if !max_skips.nil? && !(max_skips.is_a?(Integer) && max_skips >= 0)
+          raise Pbt::InvalidConfiguration, "max_skips must be a non-negative Integer or nil"
+        end
+      end
 
       # If using Ractor, some extra configurations are available and they need to be set up.
       #
@@ -133,25 +166,45 @@ module Pbt
       # @param runner [RunnerIterator]
       # @return [void]
       def run_it_in_ractors(property, runner)
-        runner.map.with_index { |val, index|
-          c = build_case(val, runner.case_index(index))
-          c.ractor = property.run_in_ractor(c.val)
-          c
-        }.each do |c|
+        launched = []
+        generation_error = nil
+
+        begin
+          runner.each_with_index do |val, index|
+            c = build_case(val, runner.case_index(index))
+            c.ractor = property.run_in_ractor(c.val)
+            launched << c
+          end
+        rescue *FATAL_EXCEPTIONS
+          raise
+        rescue Exception => e # standard:disable Lint/RescueException
+          generation_error = e
+        end
+
+        stopped = false
+        launched.each do |c|
           wait_ractor_result(c.ractor)
           runner.handle_result(c)
         rescue => e
           cause = unwrap_ractor_exception(e)
           if cause.is_a?(PreconditionNotMet)
-            break if runner.handle_skip
+            if runner.handle_skip
+              stopped = true
+              break
+            end
 
             next
           end
           raise cause if FATAL_EXCEPTIONS.any? { |klass| cause.is_a?(klass) }
 
           c.exception = cause
-          break if runner.handle_result(c) # Ignore the rest of the cases when failure is accepted.
+          if runner.handle_result(c) # Ignore the rest of the cases when failure is accepted.
+            stopped = true
+            break
+          end
         end
+
+        raise generation_error if generation_error && !stopped
       end
 
       def build_case(value, index)

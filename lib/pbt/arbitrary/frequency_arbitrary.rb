@@ -13,7 +13,7 @@ module Pbt
         end
         @choices = choices.select { |weight, _| weight.positive? }.map(&:dup)
         @total = @choices.sum(&:first)
-        raise ArgumentError, "frequency requires at least one positive weight" if @total.zero?
+        raise EmptyDomainError, "frequency requires at least one positive weight" if @total.zero?
       end
 
       def generate(rng = Random.new)

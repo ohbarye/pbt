@@ -10,6 +10,11 @@ module Pbt
       # @param splat_args [Boolean] Whether generated tuple values should be splatted as positional arguments.
       # @param predicate [Proc] Predicate proc to test the generated values. Library users write this.
       def initialize(arb, keyword_args: false, splat_args: false, &predicate)
+        unless arb.respond_to?(:generate) && arb.respond_to?(:shrink)
+          raise ArgumentError, "Property arbitrary must respond to generate and shrink, got #{arb.class}"
+        end
+        raise ArgumentError, "Property requires a predicate block" unless predicate
+
         @arb = arb
         @keyword_args = keyword_args
         @splat_args = splat_args
