@@ -1,6 +1,7 @@
 ## [Unreleased]
 
-- Add `Pbt.string` (printable ASCII default), extend `Pbt.float` with `min:`, `max:`, `allow_nan:`, and `allow_infinity:` plus float-aware binary-search shrinking, and fix `ChooseArbitrary#shrink` for `Float` and exclusive ranges ([#85](https://github.com/ohbarye/pbt/issues/85)).
+- Add seed-reproducible edge-case / boundary-value bias to built-in numeric and ranged arbitraries (`IntegerArbitrary`, `FloatArbitrary`, `ChooseArbitrary`, and large `ArrayArbitrary`/`Pbt.string` lengths) to surface common boundary cases (`0`, `min`, `max`, `0.0`, `-0.0`, empty/max lengths) much more frequently ([#83](https://github.com/ohbarye/pbt/issues/83)). Note: because PRNG draw sequences and shrink order changed, seeds from v0.9.0 will generate different values and counterexamples.
+- Add `Pbt.string` (printable ASCII default), rewrite `FloatArbitrary` as a direct `Arbitrary` subclass with `min:`, `max:`, `allow_nan:`, and `allow_infinity:` plus float-aware binary-search shrinking (removing unused `FLOAT_MAPPER`/`FLOAT_UNMAPPER`), and fix `ChooseArbitrary` generation/shrinking for `Float` and exclusive ranges ([#85](https://github.com/ohbarye/pbt/issues/85)).
 - Add `Arbitrary#bind` / `#flat_map` (`BindArbitrary`) for dependent value generation with integrated `Sample` shrinking ([#84](https://github.com/ohbarye/pbt/issues/84)).
 - Improve `IntegerArbitrary#shrink` to yield binary-search candidates toward `target`, enabling greedy shrinking to converge to exact failure thresholds ([#82](https://github.com/ohbarye/pbt/issues/82)).
 

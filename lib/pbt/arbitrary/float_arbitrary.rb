@@ -11,8 +11,9 @@ module Pbt
       DEFAULT_MIN = -1_000_000.0
       DEFAULT_MAX = 1_000_000.0
       DEFAULT_SPAN = 1_000_000.0
+      EDGE_CASE_BIAS_DENOMINATOR = 5
       MAX_SHRINK_STEPS = 16
-      private_constant :DEFAULT_MIN, :DEFAULT_MAX, :DEFAULT_SPAN, :MAX_SHRINK_STEPS
+      private_constant :DEFAULT_MIN, :DEFAULT_MAX, :DEFAULT_SPAN, :EDGE_CASE_BIAS_DENOMINATOR, :MAX_SHRINK_STEPS
 
       # @param min [Integer, Float, nil] Inclusive finite lower bound.
       # @param max [Integer, Float, nil] Inclusive finite upper bound.
@@ -28,6 +29,7 @@ module Pbt
         @empty = empty_domain?
         @generation_bounds = @empty ? nil : compute_generation_bounds
         @special_values = compute_special_values
+        @edge_cases = @empty ? [].freeze : compute_finite_edge_cases
       end
 
       # @see Arbitrary#generate
@@ -40,6 +42,10 @@ module Pbt
 
         if !@special_values.empty? && rng.rand(20).zero?
           return @special_values[rng.rand(@special_values.size)]
+        end
+
+        if !@edge_cases.empty? && rng.rand(EDGE_CASE_BIAS_DENOMINATOR).zero?
+          return @edge_cases[rng.rand(@edge_cases.size)]
         end
 
         if @min.nil? && @max.nil? && rng.rand(2).zero?
@@ -214,6 +220,20 @@ module Pbt
           values << -Float::INFINITY if @min.nil?
         end
         values.freeze
+      end
+
+      def compute_finite_edge_cases
+        lo, hi = @generation_bounds
+        return [].freeze if lo >= hi
+
+        candidates = [0.0, 1.0, -1.0]
+        candidates << -0.0 if lo < 0.0 && hi >= 0.0
+        candidates << @min if @min
+        candidates << @max if @max
+        candidates
+          .select { |v| v.between?(lo, hi) }
+          .uniq { |v| v.zero? ? (1.0 / v) : v }
+          .freeze
       end
 
       def sample_finite(lo, hi, rng)

@@ -5,7 +5,9 @@ module Pbt
     # Generates random integers between `min` and `max`.
     class IntegerArbitrary < Arbitrary
       DEFAULT_TARGET = 0
-      private_constant :DEFAULT_TARGET
+      EDGE_CASE_DOMAIN_THRESHOLD = 20
+      EDGE_CASE_BIAS_DENOMINATOR = 5
+      private_constant :DEFAULT_TARGET, :EDGE_CASE_DOMAIN_THRESHOLD, :EDGE_CASE_BIAS_DENOMINATOR
 
       # @param min [Integer] Minimum value to generate.
       # @param max [Integer] Maximum value to generate.
@@ -14,10 +16,15 @@ module Pbt
 
         @min = min
         @max = max
+        @edge_cases = build_edge_cases
       end
 
       # @see Arbitrary#generate
       def generate(rng = Random.new)
+        if @edge_cases && rng.rand(EDGE_CASE_BIAS_DENOMINATOR).zero?
+          return @edge_cases[rng.rand(@edge_cases.size)]
+        end
+
         rng.rand(@min..@max)
       rescue ArgumentError => e
         raise EmptyDomainError, e.message if @min > @max
@@ -60,6 +67,16 @@ module Pbt
             end
           end
         end
+      end
+
+      private
+
+      def build_edge_cases
+        return nil unless @min.is_a?(Integer) && @max.is_a?(Integer)
+        return nil if @min > @max
+        return nil if (@max - @min + 1) <= EDGE_CASE_DOMAIN_THRESHOLD
+
+        [0, 1, -1, @min, @max].uniq.select { |v| v.between?(@min, @max) }.freeze
       end
     end
   end

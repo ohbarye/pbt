@@ -70,9 +70,9 @@ RSpec.describe Pbt::Arbitrary::MapArbitrary do
 
   describe "#sample and contextual shrinking without unmapper" do
     it "shrinks non-invertible block mappings via sample provenance" do
-      arb = Pbt.integer(min: 0, max: 100).map { |n| {value: n, doubled: n * 2} }
+      arb = Pbt.integer(min: 0, max: 10).map { |n| {value: n, doubled: n * 2} }
       rng = double("rng")
-      expect(rng).to receive(:rand).with(0..100).and_return(10)
+      expect(rng).to receive(:rand).with(0..10).and_return(10)
 
       sample = arb.sample(rng)
       expect(sample.value).to eq({value: 10, doubled: 20})

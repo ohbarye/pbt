@@ -17,7 +17,7 @@ RSpec.describe "Pbt.assume" do
       end
 
       it "skips precondition-violating candidates during shrinking" do
-        result = Pbt.check(seed: 1, num_runs: 50, worker: worker) do
+        result = Pbt.check(seed: 2, num_runs: 50, worker: worker) do
           Pbt.property(Pbt.integer(min: 0, max: 100)) do |n|
             Pbt.assume(n.odd?)
             raise "odd too big" if n >= 5

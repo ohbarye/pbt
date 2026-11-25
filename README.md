@@ -114,6 +114,8 @@ Discarded cases do not count toward `num_runs` and are skipped during shrinking.
 
 Arbitrary generates random values. It is also responsible for shrinking those values if asked to shrink a failed value as input.
 
+Built-in numeric and ranged arbitraries (`Pbt.integer`, `Pbt.nat`, `Pbt.float`, `Pbt.choose`, and large `Pbt.array`/`Pbt.string` lengths) apply seed-reproducible edge-case bias toward boundary values (such as `0`, `1`, `-1`, `min`, `max`, `0.0`, `-0.0`, and empty/max lengths) to increase the likelihood of catching common corner-case bugs within the default `num_runs: 100`.
+
 Here, we used only one type of arbitrary, `Pbt.integer`. There are many other built-in arbitraries, and you can create a variety of inputs by combining existing ones.
 
 #### Shrink
