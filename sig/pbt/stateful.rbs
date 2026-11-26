@@ -103,6 +103,7 @@ module Pbt
       ) -> Context
     end
 
+    # Internal helper module (not part of the stable SemVer public API).
     module Resolver
       def self.arbitrary?: (untyped obj) -> bool
       def self.deep_dup: (untyped obj, ?Hash[untyped, untyped] cache) -> untyped
@@ -130,6 +131,7 @@ module Pbt
       ) -> void
 
       def guard?: (untyped state) -> bool
+      def state_dependent_arguments?: () -> bool
       def arguments_for: (untyped state) -> Arbitrary::_Arbitrary[untyped]
       def precondition?: (untyped state, untyped args) -> bool
       def next_state: (untyped state, untyped args, Ref ref) -> untyped
@@ -188,6 +190,7 @@ module Pbt
       def build: () -> Spec
     end
 
+    # Internal shrinking classes (not part of the stable SemVer public API).
     class ShrinkSession
       attr_reader attempts: Integer
       attr_reader max_attempts: Integer
@@ -217,7 +220,7 @@ module Pbt
     class Shrinker
       def initialize: (Spec spec) -> void
       def shrink: (RunSample run_sample, failure: Exception?) -> Enumerator[RunSample, untyped]
-      def valid_run?: (Run run) -> bool
+      def valid_run?: (Run run, ?original_states: Hash[Integer, untyped]?) -> bool
     end
 
     class Property

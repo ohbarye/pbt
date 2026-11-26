@@ -4,7 +4,7 @@
 [![Build Status](https://github.com/ohbarye/pbt/actions/workflows/main.yml/badge.svg)](https://github.com/ohbarye/pbt/actions/workflows/main.yml)
 [![RubyDoc](https://img.shields.io/badge/%F0%9F%93%9ARubyDoc-documentation-informational.svg)](https://www.rubydoc.info/gems/pbt)
 
-A property-based testing tool for Ruby with experimental features that allow you to run test cases in parallel.
+A property-based testing library for Ruby with shrinking, stateful testing, RBS type signatures, and optional Ractor parallelism.
 
 PBT stands for Property-Based Testing.
 
@@ -135,10 +135,12 @@ There are many built-in arbitraries in `Pbt`. You can use them to generate rando
 Pbt.integer.generate                  # => 42
 Pbt.integer(min: -1, max: 8).generate # => Integer between -1 and 8
 Pbt.float(min: 0.0, max: 1.0).generate # => Float between 0.0 and 1.0
+Pbt.float(allow_nan: true, allow_infinity: true).generate # => Float (including NaN / ±Infinity)
 
 Pbt.symbol.generate                   # => :atq
 
 Pbt.string.generate                   # => "aagjZfao" (printable ASCII)
+Pbt.printable_string.generate         # => "a中😀" (printable Unicode)
 Pbt.ascii_char.generate               # => "a"
 Pbt.ascii_string.generate             # => "aagjZfao"
 
@@ -428,7 +430,7 @@ You cannot use any methods provided by test frameworks like `expect` or `assert`
 it do
   Pbt.assert(worker: :ractor) do
     Pbt.property(Pbt.integer) do |n|
-      # This is not possible because `self` if a Ractor here.
+      # This is not possible because `self` is a Ractor here.
       expect(n).to be_an(Integer) # => Ractor::RemoteError (cause by NoMethodError for `expect` or `be_an`)
     end
   end
@@ -447,31 +449,20 @@ Pbt.assert(worker: :none) do
 end
 ```
 
-## TODOs
+## Type Signatures (RBS)
 
-Once this project finishes the following, we will release v1.0.0.
+`pbt` ships complete [RBS](https://github.com/ruby/rbs) type signatures under `sig/` (`sig/pbt.rbs`, `sig/pbt/*.rbs`, and `sig/manifest.yaml`), verified in CI with both `rbs validate` and `steep check`.
 
-- [x] Implement basic primitive arbitraries
-- [x] Implement composite arbitraries
-- [x] Support shrinking
-- [x] Support multiple concurrency methods
-  - [x] Ractor
-  - [x] Process (dropped)
-  - [x] Thread (dropped)
-  - [x] None (Run tests sequentially)
-- [x] Documentation
-  - [x] Add better examples
-  - [x] Arbitrary usage
-  - [x] Configuration
-- [x] Benchmark
-- [x] Rich report by verbose mode
-- [x] (Partially) Allow to use expectations and matchers provided by test framework in Ractor. (dropped)
-  - It'd be so hard to pass assertions like `expect`, `assert` to a Ractor.
-- [x] Implement frequency arbitrary
-- [x] Statistics feature to aggregate generated values
-- [x] Decide DSL (explicit `Pbt.assert` / `Pbt.check` + `Pbt.property` / `Pbt.stateful` composition)
-- [x] Try Fiber ([experiment and v1 decision](benchmark/FIBER.md))
-- [x] Stateful property-based testing (via `Pbt.stateful`)
+Steep and RBS-aware editors pick up the bundled signatures automatically. Note that on Ruby 3.3 with RBS 3.x (where `Set` is still a stdlib library rather than core), include `library "set"` in your `Steepfile` if you reference `Pbt.set` or `Pbt::Stateful`.
+
+## Versioning and Stability
+
+`pbt` follows [Semantic Versioning](https://semver.org/):
+
+- **Stable public API**: top-level `Pbt.*` entry points (`assert`, `check`, `property`, `stateful`, `assume`, `statistics`, `configure`, `configuration`, and arbitrary constructors), public `Arbitrary` / `Sample` methods, the `Pbt.stateful` DSL and its value/error types (`Run`, `Step`, `Ref`, `Context`, `StepFailure`, `InvalidSpec`, `GenerationError`, `ModelError`), and `Pbt::Reporter::RunDetails`.
+- **Experimental**: `worker: :ractor` remains experimental while Ruby's Ractor API continues to evolve.
+- **Internal classes**: implementation helpers (such as `RunnerIterator`, `Tosser`, `Stateful::Shrinker`, `Stateful::ShrinkSession`, `Stateful::RunSample`, and `Stateful::Resolver`) are not covered by SemVer stability guarantees.
+- **Seed reproducibility**: seeds reproduce identical generated values and shrink paths within the same `pbt` version. Minor and major releases may change PRNG consumption or shrinking order as generators and shrinkers improve.
 
 ## Development
 
@@ -479,7 +470,7 @@ Once this project finishes the following, we will release v1.0.0.
 
 ```shell
 bin/setup
-bundle exec rake # Run tests and lint at once
+bundle exec rake # Run specs, Standard Ruby lint, RBS validation, and Steep type-checking
 ```
 
 ### Test
